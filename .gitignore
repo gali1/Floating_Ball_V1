@@ -1,0 +1,21 @@
+# Ignore binary files
+*.dll
+*.pdb
+*.exe
+*.obj
+*.class
+*.o
+*.so
+*.a
+*.lib
+
+# Ignore log files
+*.log
+
+# Ignore resources folder
+resources
+
+# Ignore other common files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
