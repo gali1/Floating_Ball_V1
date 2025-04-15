@@ -1,0 +1,107 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HoveringBallApp.App">
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+        <Style Selector="Border.PopupBox">
+            <Setter Property="Background" Value="#E6333333"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="MinWidth" Value="150"/>
+        </Style>
+
+        <Style Selector="Border.PopupBox.Light">
+            <Setter Property="Background" Value="#E6FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+        </Style>
+
+        <Style Selector="TextBlock.PopupTitle">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+
+        <Style Selector="TextBlock.PopupTitle.Light">
+            <Setter Property="Foreground" Value="#333333"/>
+        </Style>
+
+        <Style Selector="TextBox.PopupInput">
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+
+        <Style Selector="TextBox.PopupInput.Light">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="CaretBrush" Value="#333333"/>
+        </Style>
+
+        <Style Selector="Button.WindowControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+
+        <Style Selector="Button.WindowControl:pointerover">
+            <Setter Property="Background" Value="#444444"/>
+        </Style>
+
+        <Style Selector="Button.WindowControl.Light">
+            <Setter Property="Foreground" Value="#666666"/>
+        </Style>
+
+        <Style Selector="Button.WindowControl.Light:pointerover">
+            <Setter Property="Background" Value="#EEEEEE"/>
+        </Style>
+
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <Style Selector="TextBlock.Light">
+            <Setter Property="Foreground" Value="#333333"/>
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+
+        <Style Selector="Button.Light">
+            <Setter Property="Background" Value="#DDDDDD"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#AAAAAA"/>
+        </Style>
+
+        <Style Selector="Ellipse.HoveringBall">
+            <Setter Property="Width" Value="80"/>
+            <Setter Property="Height" Value="80"/>
+            <Setter Property="Fill" Value="White"/>
+            <Setter Property="Stroke" Value="Black"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="Ellipse.HoveringBall.Dark">
+            <Setter Property="Fill" Value="#333333"/>
+            <Setter Property="Stroke" Value="#CCCCCC"/>
+        </Style>
+    </Application.Styles>
+</Application>

@@ -1,0 +1,79 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/gmali/Floating_Ball/HoveringBallApp.csproj": {}
+  },
+  "projects": {
+    "/home/gmali/Floating_Ball/HoveringBallApp.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/gmali/Floating_Ball/HoveringBallApp.csproj",
+        "projectName": "HoveringBallApp",
+        "projectPath": "/home/gmali/Floating_Ball/HoveringBallApp.csproj",
+        "packagesPath": "/home/gmali/.nuget/packages/",
+        "outputPath": "/home/gmali/Floating_Ball/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/gmali/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net7.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net7.0": {
+            "targetAlias": "net7.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net7.0": {
+          "targetAlias": "net7.0",
+          "dependencies": {
+            "Avalonia": {
+              "target": "Package",
+              "version": "[11.0.0, )"
+            },
+            "Avalonia.Controls.DataGrid": {
+              "target": "Package",
+              "version": "[11.0.0, )"
+            },
+            "Avalonia.Desktop": {
+              "target": "Package",
+              "version": "[11.0.0, )"
+            },
+            "Avalonia.Themes.Fluent": {
+              "target": "Package",
+              "version": "[11.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/7.0.410/RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
