@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Animation;
 using System;
 using System.Collections.Generic;
+using Avalonia.Styling;
 
 namespace HoveringBallApp
 {
@@ -17,7 +19,7 @@ namespace HoveringBallApp
         private static ThemeManager _instance;
         public static ThemeManager Instance => _instance ??= new ThemeManager();
 
-        private AppTheme _currentTheme = AppTheme.Brown; // Default to brown theme now
+        private AppTheme _currentTheme = AppTheme.Brown; // Default to brown theme
 
         public event EventHandler<AppTheme> ThemeChanged;
 
@@ -34,6 +36,9 @@ namespace HoveringBallApp
             }
         }
 
+        // Add support for animated theme transitions
+        private readonly TimeSpan _themeTransitionDuration = TimeSpan.FromMilliseconds(300);
+
         private ThemeManager()
         {
             // Private constructor for singleton
@@ -41,7 +46,7 @@ namespace HoveringBallApp
 
         public void ToggleTheme()
         {
-            // Toggle between all three themes now: Dark -> Light -> Brown -> Dark
+            // Toggle between all three themes: Dark -> Light -> Brown -> Dark
             CurrentTheme = CurrentTheme switch
             {
                 AppTheme.Dark => AppTheme.Light,
@@ -68,6 +73,9 @@ namespace HoveringBallApp
                 control.Classes.Contains("WindowControl") ||
                 control.Classes.Contains("HoveringBall"))
             {
+                // Animate transition for theme-specific controls
+                AnimateThemeTransition(control);
+
                 control.Classes.Remove("Light");
                 control.Classes.Remove("Dark");
                 control.Classes.Remove("Brown");
@@ -162,6 +170,97 @@ namespace HoveringBallApp
                         break;
                 }
             }
+            else if (control is ComboBox comboBox)
+            {
+                comboBox.Classes.Remove("Light");
+                comboBox.Classes.Remove("Dark");
+                comboBox.Classes.Remove("Brown");
+
+                switch (theme)
+                {
+                    case AppTheme.Light:
+                        comboBox.Foreground = new SolidColorBrush(Color.Parse("#333333"));
+                        comboBox.Background = new SolidColorBrush(Colors.White);
+                        comboBox.Classes.Add("Light");
+                        break;
+                    case AppTheme.Dark:
+                        comboBox.Foreground = new SolidColorBrush(Colors.White);
+                        comboBox.Background = new SolidColorBrush(Color.Parse("#444444"));
+                        comboBox.Classes.Add("Dark");
+                        break;
+                    case AppTheme.Brown:
+                        comboBox.Foreground = new SolidColorBrush(Color.Parse("#5D4037"));
+                        comboBox.Background = new SolidColorBrush(Color.Parse("#F5DEB3"));
+                        comboBox.Classes.Add("Brown");
+                        break;
+                }
+            }
+            else if (control is CheckBox checkBox)
+            {
+                checkBox.Classes.Remove("Light");
+                checkBox.Classes.Remove("Dark");
+                checkBox.Classes.Remove("Brown");
+
+                switch (theme)
+                {
+                    case AppTheme.Light:
+                        checkBox.Foreground = new SolidColorBrush(Color.Parse("#333333"));
+                        checkBox.Classes.Add("Light");
+                        break;
+                    case AppTheme.Dark:
+                        checkBox.Foreground = new SolidColorBrush(Colors.White);
+                        checkBox.Classes.Add("Dark");
+                        break;
+                    case AppTheme.Brown:
+                        checkBox.Foreground = new SolidColorBrush(Colors.White);
+                        checkBox.Classes.Add("Brown");
+                        break;
+                }
+            }
+            else if (control is RadioButton radioButton)
+            {
+                radioButton.Classes.Remove("Light");
+                radioButton.Classes.Remove("Dark");
+                radioButton.Classes.Remove("Brown");
+
+                switch (theme)
+                {
+                    case AppTheme.Light:
+                        radioButton.Foreground = new SolidColorBrush(Color.Parse("#333333"));
+                        radioButton.Classes.Add("Light");
+                        break;
+                    case AppTheme.Dark:
+                        radioButton.Foreground = new SolidColorBrush(Colors.White);
+                        radioButton.Classes.Add("Dark");
+                        break;
+                    case AppTheme.Brown:
+                        radioButton.Foreground = new SolidColorBrush(Colors.White);
+                        radioButton.Classes.Add("Brown");
+                        break;
+                }
+            }
+            else if (control is Separator separator)
+            {
+                separator.Classes.Remove("Light");
+                separator.Classes.Remove("Dark");
+                separator.Classes.Remove("Brown");
+
+                switch (theme)
+                {
+                    case AppTheme.Light:
+                        separator.Background = new SolidColorBrush(Color.Parse("#22000000"));
+                        separator.Classes.Add("Light");
+                        break;
+                    case AppTheme.Dark:
+                        separator.Background = new SolidColorBrush(Color.Parse("#33FFFFFF"));
+                        separator.Classes.Add("Dark");
+                        break;
+                    case AppTheme.Brown:
+                        separator.Background = new SolidColorBrush(Color.Parse("#40FFFFFF"));
+                        separator.Classes.Add("Brown");
+                        break;
+                }
+            }
 
             // Recursively apply to children
             if (control is Panel panel)
@@ -178,6 +277,68 @@ namespace HoveringBallApp
             {
                 UpdateThemeClasses(contentAsControl, theme);
             }
+        }
+
+        private void AnimateThemeTransition(Control control)
+        {
+            // Add a subtle fade transition for theme changes
+            var opacityAnimation = new Animation
+            {
+                Duration = _themeTransitionDuration,
+                FillMode = FillMode.Forward
+            };
+
+            opacityAnimation.Children.Add(new KeyFrame
+            {
+                Cue = new Cue(0.0),
+                Setters = { new Setter(Control.OpacityProperty, 0.85) }
+            });
+
+            opacityAnimation.Children.Add(new KeyFrame
+            {
+                Cue = new Cue(1.0),
+                Setters = { new Setter(Control.OpacityProperty, 1.0) }
+            });
+
+            // Only animate if control is visible
+            if (control.IsVisible)
+            {
+                opacityAnimation.RunAsync(control);
+            }
+        }
+
+        // Get appropriate colors based on current theme
+        public Color GetPrimaryColor()
+        {
+            return CurrentTheme switch
+            {
+                AppTheme.Light => Color.Parse("#0078D7"),
+                AppTheme.Dark => Color.Parse("#3393DF"),
+                AppTheme.Brown => Color.Parse("#CD853F"),
+                _ => Color.Parse("#3393DF"),
+            };
+        }
+
+        public Color GetBackgroundColor()
+        {
+            return CurrentTheme switch
+            {
+                AppTheme.Light => Color.Parse("#F5F5F5"),
+                AppTheme.Dark => Color.Parse("#2D2D2D"),
+                AppTheme.Brown => Color.Parse("#8B5A2B"),
+                _ => Color.Parse("#2D2D2D"),
+            };
+        }
+
+        public Color GetTextColor()
+        {
+            return CurrentTheme switch
+            {
+                AppTheme.Light => Color.Parse("#333333"),
+                AppTheme.Dark => Colors.White,
+                AppTheme.Brown => Color.Parse("#F5F5DC"),
+                _ => Colors.White,
+            };
         }
     }
 }

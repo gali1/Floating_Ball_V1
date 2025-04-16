@@ -1,22 +1,21 @@
 <Application xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="HoveringBallApp.App">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="HoveringBallApp.App">
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 
-        <!-- Rich Ball Styles -->
+        <!-- Enhanced Ball Styles -->
         <Style Selector="Ellipse.HoveringBall">
             <Setter Property="Width" Value="80"/>
             <Setter Property="Height" Value="80"/>
-            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="StrokeThickness" Value="1.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Transitions">
                 <Setter.Value>
                     <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" />
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut"/>
                     </Transitions>
                 </Setter.Value>
             </Setter>
@@ -24,6 +23,11 @@
 
         <Style Selector="Ellipse.HoveringBall:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.05)" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="15" Opacity="0.3" OffsetX="0" OffsetY="0"/>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Dark Theme Ball -->
@@ -31,8 +35,9 @@
             <Setter Property="Fill">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Offset="0" Color="#444444"/>
-                        <GradientStop Offset="0.5" Color="#333333"/>
+                        <GradientStop Offset="0" Color="#555555"/>
+                        <GradientStop Offset="0.4" Color="#444444"/>
+                        <GradientStop Offset="0.7" Color="#333333"/>
                         <GradientStop Offset="1" Color="#222222"/>
                     </LinearGradientBrush>
                 </Setter.Value>
@@ -40,8 +45,8 @@
             <Setter Property="Stroke">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Offset="0" Color="#666666"/>
-                        <GradientStop Offset="1" Color="#AAAAAA"/>
+                        <GradientStop Offset="0" Color="#777777"/>
+                        <GradientStop Offset="1" Color="#BBBBBB"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
@@ -53,16 +58,17 @@
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                         <GradientStop Offset="0" Color="#FFFFFF"/>
-                        <GradientStop Offset="0.5" Color="#F5F5F5"/>
-                        <GradientStop Offset="1" Color="#EEEEEE"/>
+                        <GradientStop Offset="0.4" Color="#F8F8F8"/>
+                        <GradientStop Offset="0.7" Color="#F0F0F0"/>
+                        <GradientStop Offset="1" Color="#E8E8E8"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
             <Setter Property="Stroke">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Offset="0" Color="#CCCCCC"/>
-                        <GradientStop Offset="1" Color="#999999"/>
+                        <GradientStop Offset="0" Color="#DDDDDD"/>
+                        <GradientStop Offset="1" Color="#AAAAAA"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
@@ -73,7 +79,7 @@
             <Setter Property="Fill">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Offset="0" Color="#8B5A2B"/>
+                        <GradientStop Offset="0" Color="#9B6E42"/>
                         <GradientStop Offset="0.3" Color="#A0522D"/>
                         <GradientStop Offset="0.7" Color="#CD853F"/>
                         <GradientStop Offset="1" Color="#D2691E"/>
@@ -83,7 +89,7 @@
             <Setter Property="Stroke">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Offset="0" Color="#D2B48C"/>
+                        <GradientStop Offset="0" Color="#E6C9A8"/>
                         <GradientStop Offset="1" Color="#8B4513"/>
                     </LinearGradientBrush>
                 </Setter.Value>
@@ -100,36 +106,47 @@
             <Setter Property="Transitions">
                 <Setter.Value>
                     <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" />
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CircularEaseOut"/>
                     </Transitions>
                 </Setter.Value>
             </Setter>
         </Style>
 
         <Style Selector="Ellipse.ThemeToggle:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.2)" />
+            <Setter Property="RenderTransform" Value="scale(1.3)" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="5" Opacity="0.4"/>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <!-- Popup Box Styles -->
+        <!-- Enhanced Popup Box Styles -->
         <Style Selector="Border.PopupBox">
-            <Setter Property="Background" Value="#E6333333"/>
+            <Setter Property="Background" Value="#EE333333"/>
             <Setter Property="BorderBrush" Value="#666666"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="10"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="MinWidth" Value="250"/>
+            <Setter Property="MinWidth" Value="260"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="15" Opacity="0.3" OffsetX="2" OffsetY="4"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Transitions">
                 <Setter.Value>
                     <Transitions>
-                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
                     </Transitions>
                 </Setter.Value>
             </Setter>
         </Style>
 
         <Style Selector="Border.PopupBox.Light">
-            <Setter Property="Background" Value="#E6FFFFFF"/>
+            <Setter Property="Background" Value="#EEFFFFFF"/>
             <Setter Property="BorderBrush" Value="#CCCCCC"/>
         </Style>
 
@@ -137,19 +154,21 @@
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Offset="0" Color="#E6D2B48C"/>
-                        <GradientStop Offset="1" Color="#E6A0522D"/>
+                        <GradientStop Offset="0" Color="#EED2B48C"/>
+                        <GradientStop Offset="1" Color="#EEA0522D"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
             <Setter Property="BorderBrush" Value="#8B4513"/>
         </Style>
 
-        <!-- Text Styles -->
+        <!-- Enhanced Text Styles -->
         <Style Selector="TextBlock.PopupTitle">
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style Selector="TextBlock.PopupTitle.Light">
@@ -160,19 +179,84 @@
             <Setter Property="Foreground" Value="#FFFFFF"/>
         </Style>
 
+        <!-- Update these TextBox style sections in your App.axaml file -->
+
+        <!-- Enhanced TextBox Styles with fixed text/cursor colors and rounded corners -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="CaretBrush" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                        <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="#0078D7"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="CaretBrush" Value="#333333"/>
+        </Style>
+
+        <Style Selector="TextBox:pointerover">
+            <Setter Property="BorderBrush" Value="#999999"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#333333"/>
+        </Style>
+
         <Style Selector="TextBox.PopupInput">
             <Setter Property="Background" Value="#444444"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#666666"/>
-            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,8"/>
             <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                        <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="TextBox.PopupInput:focus">
+            <Setter Property="BorderBrush" Value="#0078D7"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
         </Style>
 
         <Style Selector="TextBox.PopupInput.Light">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="#333333"/>
             <Setter Property="BorderBrush" Value="#CCCCCC"/>
             <Setter Property="CaretBrush" Value="#333333"/>
+        </Style>
+
+        <Style Selector="TextBox.PopupInput.Light:focus">
+            <Setter Property="BorderBrush" Value="#0078D7"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="CaretBrush" Value="#333333"/>
+        </Style>
+
+        <Style Selector="TextBox.PopupInput.Light:pointerover">
+            <Setter Property="BorderBrush" Value="#999999"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#333333"/>
         </Style>
 
         <Style Selector="TextBox.PopupInput.Brown">
@@ -182,14 +266,31 @@
             <Setter Property="CaretBrush" Value="#5D4037"/>
         </Style>
 
-        <!-- Window Controls -->
+        <Style Selector="TextBox.PopupInput.Brown:focus">
+            <Setter Property="BorderBrush" Value="#CD853F"/>
+            <Setter Property="Background" Value="#F5DEB3"/>
+            <Setter Property="Foreground" Value="#5D4037"/>
+            <Setter Property="CaretBrush" Value="#5D4037"/>
+        </Style>
+
+        <!-- Add ComboBox rounded corners as well -->
+        <Style Selector="ComboBox">
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+
+        <!-- Round Button corners too for consistency -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+
+        <!-- Enhanced Window Controls -->
         <Style Selector="Button.WindowControl">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="24"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="3"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Transitions">
@@ -202,7 +303,13 @@
         </Style>
 
         <Style Selector="Button.WindowControl:pointerover">
+            <Setter Property="Background" Value="#555555"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+
+        <Style Selector="Button.WindowControl:pressed">
             <Setter Property="Background" Value="#444444"/>
+            <Setter Property="RenderTransform" Value="scale(0.95)"/>
         </Style>
 
         <Style Selector="Button.WindowControl.Light">
@@ -211,6 +318,7 @@
 
         <Style Selector="Button.WindowControl.Light:pointerover">
             <Setter Property="Background" Value="#EEEEEE"/>
+            <Setter Property="Foreground" Value="#333333"/>
         </Style>
 
         <Style Selector="Button.WindowControl.Brown">
@@ -218,19 +326,22 @@
         </Style>
 
         <Style Selector="Button.WindowControl.Brown:pointerover">
-            <Setter Property="Background" Value="#8B4513"/>
+            <Setter Property="Background" Value="#A0522D"/>
         </Style>
 
-        <!-- Button Styles -->
+        <!-- Enhanced Button Styles -->
         <Style Selector="Button">
             <Setter Property="Background" Value="#444444"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#666666"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,8"/>
             <Setter Property="Transitions">
                 <Setter.Value>
                     <Transitions>
-                        <BrushTransition Property="Background" Duration="0:0:0.1" />
+                        <BrushTransition Property="Background" Duration="0:0:0.15" />
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
                     </Transitions>
                 </Setter.Value>
             </Setter>
@@ -238,15 +349,26 @@
 
         <Style Selector="Button:pointerover">
             <Setter Property="Background" Value="#555555"/>
+            <Setter Property="BorderBrush" Value="#888888"/>
+        </Style>
+
+        <Style Selector="Button:pressed">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
         </Style>
 
         <Style Selector="Button.Light">
-            <Setter Property="Background" Value="#DDDDDD"/>
+            <Setter Property="Background" Value="#EEEEEE"/>
             <Setter Property="Foreground" Value="#333333"/>
             <Setter Property="BorderBrush" Value="#AAAAAA"/>
         </Style>
 
         <Style Selector="Button.Light:pointerover">
+            <Setter Property="Background" Value="#DDDDDD"/>
+            <Setter Property="BorderBrush" Value="#999999"/>
+        </Style>
+
+        <Style Selector="Button.Light:pressed">
             <Setter Property="Background" Value="#CCCCCC"/>
         </Style>
 
@@ -258,25 +380,81 @@
 
         <Style Selector="Button.Brown:pointerover">
             <Setter Property="Background" Value="#A0522D"/>
+            <Setter Property="BorderBrush" Value="#8B4513"/>
         </Style>
 
-        <!-- Code Block Styles -->
+        <Style Selector="Button.Brown:pressed">
+            <Setter Property="Background" Value="#6B4423"/>
+        </Style>
+
+        <!-- Enhanced ComboBox Styles -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <BrushTransition Property="Background" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector="ComboBox:pointerover">
+            <Setter Property="Background" Value="#555555"/>
+            <Setter Property="BorderBrush" Value="#888888"/>
+        </Style>
+
+        <Style Selector="ComboBox.Light">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+        </Style>
+
+        <Style Selector="ComboBox.Light:pointerover">
+            <Setter Property="Background" Value="#F6F6F6"/>
+            <Setter Property="BorderBrush" Value="#AAAAAA"/>
+        </Style>
+
+        <Style Selector="ComboBox.Brown">
+            <Setter Property="Background" Value="#F5DEB3"/>
+            <Setter Property="Foreground" Value="#5D4037"/>
+            <Setter Property="BorderBrush" Value="#8B4513"/>
+        </Style>
+
+        <Style Selector="ComboBox.Brown:pointerover">
+            <Setter Property="Background" Value="#F0E0C0"/>
+            <Setter Property="BorderBrush" Value="#A0522D"/>
+        </Style>
+
+        <!-- Enhanced Code Block Styles -->
         <Style Selector="Border.CodeBlock">
             <Setter Property="Background" Value="#1E1E1E"/>
             <Setter Property="BorderBrush" Value="#333333"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="0,5,0,5"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,8,0,8"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="5" Opacity="0.2" OffsetX="0" OffsetY="1"/>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style Selector="TextBlock.CodeText">
             <Setter Property="FontFamily" Value="Consolas, Menlo, Monaco, 'Courier New', monospace"/>
             <Setter Property="Foreground" Value="#D4D4D4"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="LineHeight" Value="1.4"/>
         </Style>
 
-        <!-- Syntax Highlighting -->
+        <!-- Enhanced Syntax Highlighting -->
         <Style Selector="TextBlock.Keyword">
             <Setter Property="Foreground" Value="#569CD6"/>
         </Style>
@@ -295,6 +473,33 @@
 
         <Style Selector="TextBlock.Method">
             <Setter Property="Foreground" Value="#DCDCAA"/>
+        </Style>
+
+        <!-- Enhanced CheckBox Styles -->
+        <Style Selector="CheckBox">
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
+        <!-- Enhanced RadioButton Styles -->
+        <Style Selector="RadioButton">
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
+        <!-- Enhanced Separator Styles -->
+        <Style Selector="Separator">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="0,8"/>
+            <Setter Property="Background" Value="#33FFFFFF"/>
+        </Style>
+
+        <Style Selector="Separator.Light">
+            <Setter Property="Background" Value="#22000000"/>
+        </Style>
+
+        <Style Selector="Separator.Brown">
+            <Setter Property="Background" Value="#40FFFFFF"/>
         </Style>
     </Application.Styles>
 </Application>

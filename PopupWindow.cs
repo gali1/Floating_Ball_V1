@@ -6,6 +6,9 @@ using Avalonia.Media;
 using Avalonia.Layout;
 using System;
 using System.Runtime.InteropServices;
+using Avalonia.Threading;
+using Avalonia.Animation;
+using Avalonia.Styling;
 
 namespace HoveringBallApp
 {
@@ -15,10 +18,10 @@ namespace HoveringBallApp
     /// </summary>
     public class PopupWindow : Window
     {
-        protected Border MainBorder { get; private set; }
-        protected Grid TitleBar { get; private set; }
-        protected Panel ContentArea { get; private set; }
-        protected Grid ResizeGrid { get; private set; }
+        protected Border? MainBorder { get; private set; }
+        protected Grid? TitleBar { get; private set; }
+        protected Panel? ContentArea { get; private set; }
+        protected Grid? ResizeGrid { get; private set; }
 
         private bool _isMinimized = false;
         private Size _normalSize;
@@ -31,6 +34,10 @@ namespace HoveringBallApp
         private bool _isResizing = false;
         private Point _resizeStartPoint;
         private Rect _originalBounds;
+
+        // Animation properties
+        private readonly TimeSpan _showDuration = TimeSpan.FromMilliseconds(180);
+        private readonly TimeSpan _hideDuration = TimeSpan.FromMilliseconds(120);
 
         public PopupWindow()
         {
@@ -59,9 +66,147 @@ namespace HoveringBallApp
             // Set default size constraints
             this.MinWidth = 250;
             this.MinHeight = 150;
+
+            // Set initial opacity for animation
+            this.Opacity = 0;
         }
 
-        private void ThemeManager_ThemeChanged(object sender, AppTheme theme)
+        protected override void OnOpened(EventArgs e)
+        {
+            base.OnOpened(e);
+
+            // Animate the window appearance using timer-based animation
+            this.Opacity = 0;
+
+            if (MainBorder != null)
+            {
+                MainBorder.RenderTransform = new TranslateTransform(0, -10);
+                var translateTransform = MainBorder.RenderTransform as TranslateTransform;
+
+                // Animate opacity with timer
+                int steps = 15;
+                double startOpacity = 0;
+                double endOpacity = 1;
+                int currentStep = 0;
+
+                // Create a timer for opacity animation
+                var opacityTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps
+                opacityTimer.Tick += (s, args) =>
+                {
+                    currentStep++;
+                    if (currentStep > steps)
+                    {
+                        this.Opacity = endOpacity;
+                        opacityTimer.Stop();
+                        return;
+                    }
+
+                    double progress = (double)currentStep / steps;
+                    this.Opacity = startOpacity + (endOpacity - startOpacity) * progress;
+                };
+
+                // Create a timer for translation animation
+                int translateSteps = 15;
+                int translateCurrentStep = 0;
+                var translateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                translateTimer.Tick += (s, args) =>
+                {
+                    translateCurrentStep++;
+                    if (translateCurrentStep > translateSteps)
+                    {
+                        if (translateTransform != null)
+                        {
+                            translateTransform.Y = 0;
+                        }
+                        translateTimer.Stop();
+                        return;
+                    }
+
+                    double progress = (double)translateCurrentStep / translateSteps;
+                    // Add easing
+                    double easedProgress = 1 - Math.Pow(1 - progress, 3); // Cubic ease out
+
+                    if (translateTransform != null)
+                    {
+                        translateTransform.Y = -10 + (10 * easedProgress);
+                    }
+                };
+
+                // Start both animations
+                opacityTimer.Start();
+                translateTimer.Start();
+            }
+            else
+            {
+                // Fallback if MainBorder is not initialized
+                this.Opacity = 1;
+            }
+        }
+        
+        public new void Hide()
+        {
+            // Animate hiding using timer-based animation
+            if (MainBorder != null && MainBorder.RenderTransform is TranslateTransform translateTransform)
+            {
+                // Create opacity animation timer
+                int steps = 10;
+                double startOpacity = this.Opacity;
+                double endOpacity = 0;
+                int currentStep = 0;
+
+                var opacityTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps
+                opacityTimer.Tick += (s, args) =>
+                {
+                    currentStep++;
+                    if (currentStep > steps)
+                    {
+                        this.Opacity = endOpacity;
+                        opacityTimer.Stop();
+
+                        // Call base.Hide() after opacity animation completes
+                        base.Hide();
+                        return;
+                    }
+
+                    double progress = (double)currentStep / steps;
+                    // Add easing
+                    double easedProgress = progress; // Linear for fade out
+
+                    this.Opacity = startOpacity - (startOpacity * easedProgress);
+                };
+
+                // Create translation animation timer
+                int translateSteps = 10;
+                int translateCurrentStep = 0;
+                var translateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                translateTimer.Tick += (s, args) =>
+                {
+                    translateCurrentStep++;
+                    if (translateCurrentStep > translateSteps)
+                    {
+                        translateTimer.Stop();
+                        return;
+                    }
+
+                    double progress = (double)translateCurrentStep / translateSteps;
+                    // Add easing
+                    double easedProgress = progress; // Linear for move out
+
+                    translateTransform.Y = 10 * easedProgress;
+                };
+
+                // Start both animations
+                opacityTimer.Start();
+                translateTimer.Start();
+            }
+            else
+            {
+                // Fallback if animation can't be applied
+                base.Hide();
+            }
+        }
+
+        private void ThemeManager_ThemeChanged(object? sender, AppTheme theme)
         {
             ApplyTheme(theme);
         }
@@ -80,7 +225,8 @@ namespace HoveringBallApp
             MainBorder = new Border
             {
                 Classes = { "PopupBox" },
-                MinWidth = 250
+                MinWidth = 250,
+                RenderTransform = new TranslateTransform(0, 0)
             };
 
             var mainGrid = new Grid();
@@ -91,7 +237,7 @@ namespace HoveringBallApp
             TitleBar = new Grid
             {
                 Background = Brushes.Transparent,
-                Height = 30
+                Height = 40
             };
             TitleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
             TitleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -106,7 +252,7 @@ namespace HoveringBallApp
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 0)
+                Margin = new Thickness(0, 0, 4, 0)
             };
 
             var minimizeButton = new Button
@@ -115,6 +261,7 @@ namespace HoveringBallApp
                 Content = "─",
                 FontWeight = FontWeight.Bold
             };
+            ToolTip.SetTip(minimizeButton, "Minimize");
             minimizeButton.Click += MinimizeButton_Click;
 
             var maximizeButton = new Button
@@ -123,6 +270,7 @@ namespace HoveringBallApp
                 Content = "□",
                 FontWeight = FontWeight.Bold
             };
+            ToolTip.SetTip(maximizeButton, "Maximize");
             maximizeButton.Click += MaximizeButton_Click;
 
             var closeButton = new Button
@@ -131,6 +279,7 @@ namespace HoveringBallApp
                 Content = "✕",
                 FontWeight = FontWeight.Bold
             };
+            ToolTip.SetTip(closeButton, "Close");
             closeButton.Click += CloseButton_Click;
 
             controlsPanel.Children.Add(minimizeButton);
@@ -268,12 +417,12 @@ namespace HoveringBallApp
             }
         }
 
-        private void Window_PointerPressed(object sender, PointerPressedEventArgs e)
+        private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
             // This handles window-level pointer events that weren't handled by child controls
         }
 
-        private void Window_PointerMoved(object sender, PointerEventArgs e)
+        private void Window_PointerMoved(object? sender, PointerEventArgs e)
         {
             if (_isResizing)
             {
@@ -334,7 +483,7 @@ namespace HoveringBallApp
             }
         }
 
-        private void Window_PointerReleased(object sender, PointerReleasedEventArgs e)
+        private void Window_PointerReleased(object? sender, PointerReleasedEventArgs e)
         {
             if (_isResizing)
             {
@@ -347,16 +496,18 @@ namespace HoveringBallApp
 
         protected void AddContent(Control control)
         {
-            ContentArea.Children.Add(control);
+            ContentArea?.Children.Add(control);
         }
 
         protected void SetTitle(string title)
         {
+            if (TitleBar == null) return;
+
             var titleText = new TextBlock
             {
                 Text = title,
                 Classes = { "PopupTitle" },
-                Margin = new Thickness(10, 0, 0, 0),
+                Margin = new Thickness(12, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
 
@@ -364,8 +515,10 @@ namespace HoveringBallApp
             TitleBar.Children.Add(titleText);
         }
 
-        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+        private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
         {
+            if (ContentArea == null) return;
+
             if (_isMinimized)
             {
                 // Restore
@@ -385,14 +538,14 @@ namespace HoveringBallApp
                 _isMinimized = true;
 
                 // Collapse to just the titlebar
-                if (TitleBar.Bounds.Height > 0)
+                if (TitleBar != null && TitleBar.Bounds.Height > 0)
                 {
                     Height = TitleBar.Bounds.Height + 20;
                 }
             }
         }
 
-        private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+        private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
         {
             // Toggle between maximized and normal
             if (WindowState == WindowState.Maximized)
@@ -405,12 +558,12 @@ namespace HoveringBallApp
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
             this.Hide();
         }
 
-        private void TitleBar_PointerPressed(object sender, PointerPressedEventArgs e)
+        private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
             // Check this is really the titlebar and not a child control
             if (e.Source == TitleBar)
@@ -424,7 +577,7 @@ namespace HoveringBallApp
             }
         }
 
-        private void TitleBar_PointerMoved(object sender, PointerEventArgs e)
+        private void TitleBar_PointerMoved(object? sender, PointerEventArgs e)
         {
             if (_isDragging)
             {
@@ -440,7 +593,7 @@ namespace HoveringBallApp
             }
         }
 
-        private void TitleBar_PointerReleased(object sender, PointerReleasedEventArgs e)
+        private void TitleBar_PointerReleased(object? sender, PointerReleasedEventArgs e)
         {
             _isDragging = false;
             e.Handled = true;

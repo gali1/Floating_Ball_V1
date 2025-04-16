@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
+using Avalonia.Animation;
+using Avalonia.Styling;
 
 namespace HoveringBallApp
 {
@@ -41,7 +43,10 @@ namespace HoveringBallApp
 
         // Animation related
         private DispatcherTimer _pulseTimer;
+        private DispatcherTimer _hoverTimer;
         private bool _isPulsing = false;
+        private bool _isHovering = false;
+        private readonly TimeSpan _hoverDelay = TimeSpan.FromSeconds(0.2);
 
         // Ball drag properties
         private bool _isDragging = false;
@@ -55,6 +60,11 @@ namespace HoveringBallApp
         private MenuItem _minimizeMenuItem;
         private MenuItem _resetPositionMenuItem;
         private MenuItem _exitMenuItem;
+
+        // UI elements
+        private Button _ballButton;
+        private Ellipse _ballEllipse;
+        private Ellipse _themeToggle;
 
         public new event PropertyChangedEventHandler PropertyChanged;
 
@@ -96,6 +106,13 @@ namespace HoveringBallApp
                 Interval = TimeSpan.FromMilliseconds(50)
             };
             _pulseTimer.Tick += PulseTimer_Tick;
+
+            // Initialize hover timer for delayed visual feedback
+            _hoverTimer = new DispatcherTimer
+            {
+                Interval = _hoverDelay
+            };
+            _hoverTimer.Tick += HoverTimer_Tick;
         }
 
         private void InitializeApiClients()
@@ -166,8 +183,80 @@ namespace HoveringBallApp
 
         private void ApplyTheme(AppTheme theme)
         {
-            // Theme is now handled via styles in App.axaml
-            // This method is just for additional customization if needed
+            // Get references to UI elements if not already obtained
+            if (_ballEllipse == null && _ballButton != null)
+            {
+                _ballEllipse = _ballButton.FindControl<Ellipse>("Ball");
+                _themeToggle = _ballButton.FindControl<Ellipse>("ThemeToggle");
+            }
+
+            // Apply theme classes to ball
+            if (_ballEllipse != null)
+            {
+                // Remove all theme classes first
+                _ballEllipse.Classes.Remove("Light");
+                _ballEllipse.Classes.Remove("Dark");
+                _ballEllipse.Classes.Remove("Brown");
+
+                // Add appropriate theme class
+                switch (theme)
+                {
+                    case AppTheme.Light:
+                        _ballEllipse.Classes.Add("Light");
+                        break;
+                    case AppTheme.Dark:
+                        _ballEllipse.Classes.Add("Dark");
+                        break;
+                    case AppTheme.Brown:
+                        _ballEllipse.Classes.Add("Brown");
+                        break;
+                }
+
+                // Add animation to make the transition smooth
+                var scaleAnimation = new Animation
+                {
+                    Duration = TimeSpan.FromMilliseconds(300),
+                    FillMode = FillMode.Forward
+                };
+
+                scaleAnimation.Children.Add(new KeyFrame
+                {
+                    Cue = new Cue(0.0),
+                    Setters = { new Setter(ScaleTransform.ScaleXProperty, 0.95), new Setter(ScaleTransform.ScaleYProperty, 0.95) }
+                });
+
+                scaleAnimation.Children.Add(new KeyFrame
+                {
+                    Cue = new Cue(1.0),
+                    Setters = { new Setter(ScaleTransform.ScaleXProperty, 1.0), new Setter(ScaleTransform.ScaleYProperty, 1.0) }
+                });
+
+                // Ensure we have a scale transform
+                if (_ballButton.RenderTransform == null || !(_ballButton.RenderTransform is ScaleTransform))
+                {
+                    _ballButton.RenderTransform = new ScaleTransform(1, 1);
+                }
+
+                scaleAnimation.RunAsync((Animatable)_ballButton.RenderTransform);
+
+                // Update theme toggle appearance
+                if (_themeToggle != null)
+                {
+                    // Theme-specific colors for the toggle
+                    switch (theme)
+                    {
+                        case AppTheme.Light:
+                            _themeToggle.Fill = new SolidColorBrush(Color.Parse("#333333"));
+                            break;
+                        case AppTheme.Dark:
+                            _themeToggle.Fill = new SolidColorBrush(Color.Parse("#AAAAAA"));
+                            break;
+                        case AppTheme.Brown:
+                            _themeToggle.Fill = new SolidColorBrush(Color.Parse("#F5DEB3"));
+                            break;
+                    }
+                }
+            }
         }
 
         private void MainWindow_PositionChanged(object sender, PixelPointEventArgs e)
@@ -178,6 +267,65 @@ namespace HoveringBallApp
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Get references to UI elements
+            _ballButton = this.FindControl<Button>("BallButton");
+            if (_ballButton != null)
+            {
+                _ballEllipse = _ballButton.FindControl<Ellipse>("Ball");
+                _themeToggle = _ballButton.FindControl<Ellipse>("ThemeToggle");
+
+                // Add theme switching on theme toggle click
+                if (_themeToggle != null)
+                {
+                    _themeToggle.PointerPressed += ThemeToggle_PointerPressed;
+                    _themeToggle.PointerEntered += (s, args) =>
+                    {
+                        _themeToggle.Opacity = 0.8;
+                    };
+                    _themeToggle.PointerExited += (s, args) =>
+                    {
+                        _themeToggle.Opacity = 1.0;
+                    };
+                }
+
+                // Add hover effects
+                _ballButton.PointerEntered += (s, args) =>
+                {
+                    _isHovering = true;
+                    _hoverTimer.Start();
+                };
+
+                _ballButton.PointerExited += (s, args) =>
+                {
+                    _isHovering = false;
+                    _hoverTimer.Stop();
+
+                    // Reset any hover effects if we were hovering
+                    if (_ballEllipse != null && _ballEllipse.Effect is DropShadowEffect hoverEffect)
+                    {
+                        var fadeAnimation = new Animation
+                        {
+                            Duration = TimeSpan.FromMilliseconds(200),
+                            FillMode = FillMode.Forward
+                        };
+
+                        fadeAnimation.Children.Add(new KeyFrame
+                        {
+                            Cue = new Cue(0.0),
+                            Setters = { new Setter(DropShadowEffect.BlurRadiusProperty, hoverEffect.BlurRadius) }
+                        });
+
+                        fadeAnimation.Children.Add(new KeyFrame
+                        {
+                            Cue = new Cue(1.0),
+                            Setters = { new Setter(DropShadowEffect.BlurRadiusProperty, 10.0) }
+                        });
+
+                        fadeAnimation.RunAsync((Animatable)_ballEllipse.Effect);
+                    }
+                };
+            }
+
             // Create popup windows
             _inputWindow = new InputWindow();
             _inputWindow.TextSubmitted += InputWindow_TextSubmitted;
@@ -208,6 +356,68 @@ namespace HoveringBallApp
             Console.WriteLine("MainWindow loaded successfully");
         }
 
+
+        private void ThemeToggle_PointerPressed(object? sender, PointerPressedEventArgs e)
+        {
+            // Toggle theme
+            ThemeManager.Instance.ToggleTheme();
+
+            // Add a pulse animation for feedback
+            if (_themeToggle != null)
+            {
+                AnimationHelper.AnimateBounce(_themeToggle, 1.0, 1.0, 0.5, TimeSpan.FromMilliseconds(400));
+            }
+
+            e.Handled = true;
+        }
+
+        private void HoverTimer_Tick(object sender, EventArgs e)
+        {
+            if (_isHovering && _ballEllipse != null)
+            {
+                _hoverTimer.Stop();
+
+                // Create a glow effect by adjusting the DropShadow properties directly
+                if (_ballEllipse.Effect is DropShadowEffect effect)
+                {
+                    // Animate the blur radius
+                    int steps = 15;
+                    double startBlur = effect.BlurRadius;
+                    double endBlur = 15.0;
+                    int currentStep = 0;
+
+                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                    timer.Tick += (s, args) =>
+                    {
+                        currentStep++;
+                        if (currentStep > steps)
+                        {
+                            effect.BlurRadius = endBlur;
+                            timer.Stop();
+                            return;
+                        }
+
+                        double progress = (double)currentStep / steps;
+                        double easedProgress = AnimationHelper.EaseOutCubic(progress);
+                        effect.BlurRadius = startBlur + (endBlur - startBlur) * easedProgress;
+                    };
+
+                    timer.Start();
+                }
+                else
+                {
+                    // Create effect if it doesn't exist
+                    var shadowEffect = new DropShadowEffect
+                    {
+                        BlurRadius = 15,
+                        Opacity = 0.3,
+                        OffsetX = 0,
+                        OffsetY = 0
+                    };
+                    _ballEllipse.Effect = shadowEffect;
+                }
+            }
+        }
         private void InitializeContextMenuEvents()
         {
             // Find the context menu items
@@ -243,45 +453,83 @@ namespace HoveringBallApp
             }
         }
 
+
         private void MinimizeToTray()
         {
-            // In a real implementation, this would minimize to the system tray
-            // For this example, we'll just hide the window
-            this.Hide();
-            _isInTray = true;
+            // Animate the minimization with opacity and scale
+            AnimationHelper.AnimateScale(this, 1.0, 0.3, TimeSpan.FromMilliseconds(300));
+            AnimationHelper.AnimateFade(this, 1.0, 0.0, TimeSpan.FromMilliseconds(300), () =>
+            {
+                // Reset properties and hide
+                this.Hide();
+                this.Opacity = 1.0;
+                if (this.RenderTransform is ScaleTransform st)
+                {
+                    st.ScaleX = 1.0;
+                    st.ScaleY = 1.0;
+                }
+            });
 
-            // In a real implementation, you'd create a system tray icon here
+            _isInTray = true;
         }
 
         private void ResetPosition()
         {
-            // Center the window on the screen
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            Position = new PixelPoint(
+            // Calculate target position
+            PixelPoint targetPosition = new PixelPoint(
                 (int)(Screens.Primary.Bounds.Width / 2 - Width / 2),
                 (int)(Screens.Primary.Bounds.Height / 2 - Height / 2)
             );
-        }
 
+            // Use a timer to animate the position
+            int steps = 30;
+            int currentStep = 0;
+            var startPosition = Position;
+
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+            timer.Tick += (s, e) =>
+            {
+                currentStep++;
+                if (currentStep > steps)
+                {
+                    Position = targetPosition;
+                    timer.Stop();
+                    return;
+                }
+
+                double progress = (double)currentStep / steps;
+                double easedProgress = AnimationHelper.EaseOutCubic(progress);
+
+                int newX = startPosition.X + (int)((targetPosition.X - startPosition.X) * easedProgress);
+                int newY = startPosition.Y + (int)((targetPosition.Y - startPosition.Y) * easedProgress);
+
+                Position = new PixelPoint(newX, newY);
+            };
+
+            timer.Start();
+        }
         private void CloseApplication()
         {
-            // Close all popup windows first
-            if (_inputWindow != null && _inputWindow.IsVisible)
-                _inputWindow.Close();
+            // Animate closing
+            AnimationHelper.AnimateScale(this, 1.0, 0.0, TimeSpan.FromMilliseconds(300));
+            AnimationHelper.AnimateFade(this, 1.0, 0.0, TimeSpan.FromMilliseconds(300), () =>
+            {
+                // Close all popup windows
+                if (_inputWindow != null && _inputWindow.IsVisible)
+                    _inputWindow.Close();
 
-            if (_responseWindow != null && _responseWindow.IsVisible)
-                _responseWindow.Close();
+                if (_responseWindow != null && _responseWindow.IsVisible)
+                    _responseWindow.Close();
 
-            if (_settingsWindow != null && _settingsWindow.IsVisible)
-                _settingsWindow.Close();
+                if (_settingsWindow != null && _settingsWindow.IsVisible)
+                    _settingsWindow.Close();
 
-            // Close the main window - this should exit the application
-            // in most Avalonia applications
-            this.Close();
+                // Close main window
+                this.Close();
 
-            // If for some reason the application is still running after
-            // closing all windows, use Environment.Exit as a fallback
-            Environment.Exit(0);
+                // Fallback exit
+                Environment.Exit(0);
+            });
         }
 
         // New API selection changed handler
@@ -305,46 +553,49 @@ namespace HoveringBallApp
             var ballButton = this.FindControl<Button>("BallButton");
             if (ballButton == null) return;
 
-            // Simplified animation
+            // Enhanced animation using the helper
             ballButton.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+            ballButton.RenderTransform = new ScaleTransform(0, 0);
 
-            // Create a scale transform with initial scale of 0
-            var scaleTransform = new ScaleTransform(0, 0);
-            ballButton.RenderTransform = scaleTransform;
-
-            // Create a timer to animate the scale
-            var animationTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(16) // ~60fps
-            };
-
-            double progress = 0;
-            animationTimer.Tick += (s, e) =>
-            {
-                progress += 0.02; // Adjust speed
-
-                if (progress >= 1.0)
-                {
-                    scaleTransform.ScaleX = 1.0;
-                    scaleTransform.ScaleY = 1.0;
-                    animationTimer.Stop();
-                }
-                else
-                {
-                    // Easing function (ease-out)
-                    double easedProgress = 1 - Math.Pow(1 - progress, 3);
-                    scaleTransform.ScaleX = easedProgress;
-                    scaleTransform.ScaleY = easedProgress;
-                }
-            };
-
-            animationTimer.Start();
+            // Animate from 0 to 1 with a slight bounce
+            AnimationHelper.AnimateBounce(ballButton, 0.0, 1.0, 0.15, TimeSpan.FromMilliseconds(800));
         }
-
         // Ball click handler
         public void Ball_Clicked(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("Ball clicked!");
+
+            // Simple non-animation approach to avoid the casting error
+            if (_ballButton != null)
+            {
+                // Ensure the button has a RenderTransformOrigin set
+                _ballButton.RenderTransformOrigin = RelativePoint.Center;
+
+                // Create the ScaleTransform if it doesn't exist
+                if (_ballButton.RenderTransform == null || !(_ballButton.RenderTransform is ScaleTransform))
+                {
+                    _ballButton.RenderTransform = new ScaleTransform(1, 1);
+                }
+
+                // Use a timer-based animation to achieve the effect
+                var scaleTransform = _ballButton.RenderTransform as ScaleTransform;
+                if (scaleTransform != null)
+                {
+                    // Simple feedback without animation
+                    scaleTransform.ScaleX = 0.95;
+                    scaleTransform.ScaleY = 0.95;
+
+                    // Reset after a short delay
+                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                    timer.Tick += (s, args) =>
+                    {
+                        scaleTransform.ScaleX = 1.0;
+                        scaleTransform.ScaleY = 1.0;
+                        timer.Stop();
+                    };
+                    timer.Start();
+                }
+            }
 
             // Show input window on click
             if (!_inputWindow.IsVisible)
@@ -367,7 +618,7 @@ namespace HoveringBallApp
 
             e.Handled = true;
         }
-
+        
         private async void InputWindow_TextSubmitted(object sender, string text)
         {
             await SendToApi(text);
@@ -415,10 +666,10 @@ namespace HoveringBallApp
             {
                 var mainPos = this.Position;
 
-                // Position at bottom right of the ball
+                // Position at bottom right of the ball with adjusted offset
                 _inputWindow.Position = new PixelPoint(
-                    mainPos.X + 40, // Position to the right of the ball
-                    mainPos.Y + 40  // Position at the bottom of the ball
+                    mainPos.X + 50, // Position to the right of the ball
+                    mainPos.Y + 50  // Position at the bottom of the ball
                 );
             }
 
@@ -428,10 +679,10 @@ namespace HoveringBallApp
                 var responseHeight = _responseWindow.Bounds.Height > 0 ?
                     (int)_responseWindow.Bounds.Height : 100;
 
-                // Position at top right of the ball
+                // Position at top right of the ball with adjusted offset
                 _responseWindow.Position = new PixelPoint(
-                    mainPos.X + 40, // Position to the right of the ball
-                    mainPos.Y - responseHeight  // Position above the ball
+                    mainPos.X + 50, // Position to the right of the ball
+                    mainPos.Y - responseHeight - 10  // Position above the ball with margin
                 );
             }
 
@@ -441,9 +692,9 @@ namespace HoveringBallApp
                 var settingsHeight = _settingsWindow.Bounds.Height > 0 ?
                     (int)_settingsWindow.Bounds.Height : 150;
 
-                // Position at top left of the ball
+                // Position at left of the ball with adjusted offset
                 _settingsWindow.Position = new PixelPoint(
-                    mainPos.X - (int)_settingsWindow.Bounds.Width - 10, // Position to the left of the ball
+                    mainPos.X - (int)_settingsWindow.Bounds.Width - 20, // Position to the left of the ball with margin
                     mainPos.Y - settingsHeight / 2 + 40  // Position centered relative to the ball
                 );
             }
@@ -542,24 +793,29 @@ namespace HoveringBallApp
         private void StartPulsingAnimation()
         {
             _isPulsing = true;
-            _pulseTimer.Start();
+
+            // Get reference to the Ball
+            var ballButton = this.FindControl<Button>("BallButton");
+            if (ballButton == null) return;
+
+            // Use the helper to create a pulsing animation
+            _pulseTimer = AnimationHelper.AnimatePulse(ballButton, 1.0, 0.08, 2.0);
         }
 
         private void StopPulsingAnimation()
         {
             _isPulsing = false;
-            _pulseTimer.Stop();
+            if (_pulseTimer != null)
+                _pulseTimer.Stop();
 
-            // Reset ball scale
+            // Reset ball scale with smooth animation
             var ballButton = this.FindControl<Button>("BallButton");
             if (ballButton != null)
             {
-                var scaleTransform = ballButton.RenderTransform as ScaleTransform;
-                if (scaleTransform != null)
-                {
-                    scaleTransform.ScaleX = 1.0;
-                    scaleTransform.ScaleY = 1.0;
-                }
+                AnimationHelper.AnimateScale(ballButton,
+                    ballButton.RenderTransform is ScaleTransform st ? st.ScaleX : 1.0,
+                    1.0,
+                    TimeSpan.FromMilliseconds(300));
             }
         }
 
@@ -571,15 +827,16 @@ namespace HoveringBallApp
             var ballButton = this.FindControl<Button>("BallButton");
             if (ballButton == null) return;
 
-            // Create pulse effect while processing
+            // Create enhanced pulse effect while processing
             double time = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) / 1000.0;
-            double scale = 1.0 + 0.05 * Math.Sin(time * Math.PI * 2);
+            double scale = 1.0 + 0.08 * Math.Sin(time * Math.PI * 2);
 
             var scaleTransform = ballButton.RenderTransform as ScaleTransform;
             if (scaleTransform == null)
             {
                 scaleTransform = new ScaleTransform(scale, scale);
                 ballButton.RenderTransform = scaleTransform;
+                ballButton.RenderTransformOrigin = RelativePoint.Center;
             }
             else
             {
