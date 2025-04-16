@@ -25,6 +25,8 @@ namespace HoveringBallApp
         private TextBlock _statusText;
         private DispatcherTimer _statusTimer;
         private ProgressBar _progressIndicator;
+        private CheckBox _wordWrapToggle;
+        private bool _isWordWrapEnabled = true;
 
         public string ResponseContent
         {
@@ -136,6 +138,7 @@ namespace HoveringBallApp
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             // Status notification area (initially hidden)
             _statusBorder = new Border
@@ -200,6 +203,22 @@ namespace HoveringBallApp
             _scrollViewer.Content = _contentPanel;
             Grid.SetRow(_scrollViewer, 1);
             mainGrid.Children.Add(_scrollViewer);
+
+            // Add word wrap toggle
+            _wordWrapToggle = new CheckBox
+            {
+                Content = "Word Wrap",
+                IsChecked = _isWordWrapEnabled,
+                Margin = new Thickness(5, 8, 0, 0),
+                FontSize = 12,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _wordWrapToggle.Checked += WordWrapToggle_CheckedChanged;
+            _wordWrapToggle.Unchecked += WordWrapToggle_CheckedChanged;
+
+            Grid.SetRow(_wordWrapToggle, 2);
+            mainGrid.Children.Add(_wordWrapToggle);
 
             // Add action buttons panel with improved styling
             var buttonsPanel = new StackPanel
@@ -277,11 +296,17 @@ namespace HoveringBallApp
             buttonsPanel.Children.Add(copyButton);
             buttonsPanel.Children.Add(saveButton);
 
-            Grid.SetRow(buttonsPanel, 2);
+            Grid.SetRow(buttonsPanel, 3);
             mainGrid.Children.Add(buttonsPanel);
 
             // Add to content area
             AddContent(mainGrid);
+        }
+
+        private void WordWrapToggle_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            _isWordWrapEnabled = _wordWrapToggle.IsChecked == true;
+            ProcessAndDisplayContent(_content); // Refresh content with new wrap setting
         }
 
         private void ProcessAndDisplayContent(string content)
@@ -395,7 +420,7 @@ namespace HoveringBallApp
             var textBlock = new TextBlock
             {
                 Text = text,
-                TextWrapping = TextWrapping.Wrap,
+                TextWrapping = _isWordWrapEnabled ? TextWrapping.Wrap : TextWrapping.NoWrap,
                 Margin = new Thickness(5),
                 LineHeight = 1.5,
                 FontSize = 14
@@ -532,7 +557,7 @@ namespace HoveringBallApp
             {
                 Classes = { "CodeText" },
                 Text = code,
-                TextWrapping = TextWrapping.Wrap,
+                TextWrapping = _isWordWrapEnabled ? TextWrapping.Wrap : TextWrapping.NoWrap,
                 FontFamily = new FontFamily("Consolas, Menlo, Monaco, 'Courier New', monospace")
             };
 

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Animation;
 using Avalonia.Styling;
+using Avalonia.Threading;
 
 namespace HoveringBallApp
 {
@@ -457,30 +458,34 @@ namespace HoveringBallApp
                     Setters = { new Setter(OpacityProperty, 0.0) }
                 });
 
-                _sendIcon.RenderTransform = new TranslateTransform();
+                _sendIcon.RenderTransform = new TranslateTransform(0, 0);
 
-                var moveAnimation = new Animation
+                // Create simple animation for the icon's transform
+                var translateTransform = _sendIcon.RenderTransform as TranslateTransform;
+                if (translateTransform != null)
                 {
-                    Duration = TimeSpan.FromSeconds(0.3),
-                    FillMode = Avalonia.Animation.FillMode.Forward,
-                    Easing = new Avalonia.Animation.Easings.CubicEaseOut()
-                };
+                    // Use timer-based animation to solve the casting issue
+                    int steps = 20;
+                    int currentStep = 0;
+                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
+                    timer.Tick += (s, args) =>
+                    {
+                        currentStep++;
+                        if (currentStep > steps)
+                        {
+                            timer.Stop();
+                            return;
+                        }
 
-                moveAnimation.Children.Add(new KeyFrame
-                {
-                    Cue = new Cue(0.0),
-                    Setters = { new Setter(TranslateTransform.XProperty, 0.0) }
-                });
+                        double progress = (double)currentStep / steps;
+                        double easedProgress = EaseOutCubic(progress);
+                        translateTransform.X = 20.0 * easedProgress;
+                    };
+                    timer.Start();
+                }
 
-                moveAnimation.Children.Add(new KeyFrame
-                {
-                    Cue = new Cue(1.0),
-                    Setters = { new Setter(TranslateTransform.XProperty, 20.0) }
-                });
-
-                // Show animation and submit text
+                // Apply fade animation directly to the send icon
                 animation.RunAsync(_sendIcon);
-                moveAnimation.RunAsync((Animatable)_sendIcon.RenderTransform);
 
                 // Notify the main window
                 TextSubmitted?.Invoke(this, text);
@@ -488,6 +493,12 @@ namespace HoveringBallApp
                 // Hide this window
                 this.Hide();
             }
+        }
+
+        // Easing function for animation
+        private double EaseOutCubic(double t)
+        {
+            return 1 - Math.Pow(1 - t, 3);
         }
 
         private void UpdateTextWrapping()
