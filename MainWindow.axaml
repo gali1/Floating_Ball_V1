@@ -1,30 +1,75 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="HoveringBallApp.MainWindow"
-        Title="Floating Ball API"
+        Title="Floating Ball Assistant"
         Width="90" Height="90"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
-        Background="Transparent">
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
 
     <Grid>
-        <!-- Hovering Ball with Theme Toggle and Static Border -->
-        <Ellipse Name="Ball"
-                 Classes="HoveringBall"
-                 Width="80" Height="80"
+        <!-- Shadow effect for the ball -->
+        <Ellipse Width="80" Height="80"
                  HorizontalAlignment="Center"
                  VerticalAlignment="Center"
-                 PointerPressed="Ball_PointerPressed">
-        </Ellipse>
+                 Fill="#40000000"
+                 Margin="4,4,0,0"/>
 
-        <!-- Theme Toggle Button (small dot in the center) -->
-        <Ellipse Name="ThemeToggle"
-                 Width="16" Height="16"
-                 Fill="#CCCCCC"
-                 Cursor="Hand"
-                 HorizontalAlignment="Center"
-                 VerticalAlignment="Center"
-                 PointerPressed="ThemeToggle_PointerPressed">
-        </Ellipse>
+        <!-- Main Ball with Rich Texture -->
+        <Button Name="BallButton"
+                Background="Transparent"
+                BorderThickness="0"
+                Width="80" Height="80"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Click="Ball_Clicked">
+            <Button.Template>
+                <ControlTemplate>
+                    <Grid>
+                        <!-- Ball ellipse -->
+                        <Ellipse Name="Ball"
+                                Classes="HoveringBall"
+                                Width="80" Height="80"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+
+                        <!-- Inner highlight for 3D effect -->
+                        <Ellipse Width="72" Height="72"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="-3,-3,0,0">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Offset="0" Color="#30FFFFFF"/>
+                                    <GradientStop Offset="0.8" Color="#00FFFFFF"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <!-- Theme Toggle Button (inner dot) -->
+                        <Ellipse Name="ThemeToggle"
+                                Classes="ThemeToggle"
+                                Width="16" Height="16"
+                                Cursor="Hand"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                    </Grid>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
+        <!-- Right-click context menu -->
+        <Grid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Settings" x:Name="SettingsMenuItem"/>
+                <MenuItem Header="Minimize to Tray" x:Name="MinimizeMenuItem"/>
+                <MenuItem Header="Reset Position" x:Name="ResetPositionMenuItem"/>
+                <Separator/>
+                <MenuItem Header="Exit" x:Name="ExitMenuItem"/>
+            </ContextMenu>
+        </Grid.ContextMenu>
     </Grid>
 </Window>
