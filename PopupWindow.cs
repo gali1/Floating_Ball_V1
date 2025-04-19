@@ -14,7 +14,8 @@ namespace HoveringBallApp
 {
     /// <summary>
     /// Base class for popup windows with common functionality like
-    /// dragging, minimizing, maximizing, resizing, and theme support
+    /// dragging, minimizing, maximizing, resizing, and theme support.
+    /// Enhanced with fluid animations and fully rounded styling.
     /// </summary>
     public class PopupWindow : Window
     {
@@ -41,11 +42,13 @@ namespace HoveringBallApp
 
         public PopupWindow()
         {
-            // Configure window appearance
+            // Configure window appearance with fully rounded styling
             SystemDecorations = SystemDecorations.None;
             Background = Brushes.Transparent;
             TransparencyLevelHint = new WindowTransparencyLevel[] { WindowTransparencyLevel.Transparent };
             ShowInTaskbar = false;
+            UseLayoutRounding = true; // Ensure crisp rounded edges
+            CornerRadius = new CornerRadius(24); // Fully rounded window
 
             // Enable resizing (start with auto-size, but allow manual resizing)
             SizeToContent = SizeToContent.WidthAndHeight;
@@ -221,12 +224,22 @@ namespace HoveringBallApp
             // Main window content
             var windowContent = new Grid();
 
-            // Main border with shadow effect
+            // Main border with enhanced shadow and round styling
             MainBorder = new Border
             {
                 Classes = { "PopupBox" },
                 MinWidth = 250,
-                RenderTransform = new TranslateTransform(0, 0)
+                CornerRadius = new CornerRadius(24), // Fully rounded corners
+                ClipToBounds = true, // Respect rounded corners for content
+                RenderTransform = new TranslateTransform(0, 0),
+                Effect = new DropShadowEffect
+                {
+                    BlurRadius = 20,
+                    Opacity = 0.4,
+                    OffsetX = 0,
+                    OffsetY = 5,
+                    Color = Color.Parse("#80000000") // Semi-transparent shadow for depth
+                }
             };
 
             var mainGrid = new Grid();
@@ -259,7 +272,10 @@ namespace HoveringBallApp
             {
                 Classes = { "WindowControl" },
                 Content = "─",
-                FontWeight = FontWeight.Bold
+                FontWeight = FontWeight.Bold,
+                CornerRadius = new CornerRadius(14), // Fully rounded button
+                Width = 28,
+                Height = 28
             };
             ToolTip.SetTip(minimizeButton, "Minimize");
             minimizeButton.Click += MinimizeButton_Click;
@@ -268,7 +284,10 @@ namespace HoveringBallApp
             {
                 Classes = { "WindowControl" },
                 Content = "□",
-                FontWeight = FontWeight.Bold
+                FontWeight = FontWeight.Bold,
+                CornerRadius = new CornerRadius(14), // Fully rounded button
+                Width = 28,
+                Height = 28
             };
             ToolTip.SetTip(maximizeButton, "Maximize");
             maximizeButton.Click += MaximizeButton_Click;
@@ -277,7 +296,10 @@ namespace HoveringBallApp
             {
                 Classes = { "WindowControl" },
                 Content = "✕",
-                FontWeight = FontWeight.Bold
+                FontWeight = FontWeight.Bold,
+                CornerRadius = new CornerRadius(14), // Fully rounded button
+                Width = 28,
+                Height = 28
             };
             ToolTip.SetTip(closeButton, "Close");
             closeButton.Click += CloseButton_Click;
@@ -560,7 +582,59 @@ namespace HoveringBallApp
 
         private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
-            this.Hide();
+            // Animate closing with a subtle scale and fade effect
+            if (MainBorder != null)
+            {
+                // Create a combined transform group for more complex animation
+                var transformGroup = new TransformGroup();
+                var scaleTransform = new ScaleTransform(1, 1);
+                var translateTransform = new TranslateTransform(0, 0);
+                transformGroup.Children.Add(scaleTransform);
+                transformGroup.Children.Add(translateTransform);
+                MainBorder.RenderTransform = transformGroup;
+
+                // Number of animation steps
+                int steps = 12;
+                int currentStep = 0;
+                
+                // Create timer for the closing animation
+                var animationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps
+                animationTimer.Tick += (s, args) =>
+                {
+                    currentStep++;
+                    if (currentStep > steps)
+                    {
+                        animationTimer.Stop();
+                        
+                        // Ensure we call base.Hide() after animation completes
+                        Dispatcher.UIThread.Post(() => base.Hide(), DispatcherPriority.Background);
+                        return;
+                    }
+                    
+                    double progress = (double)currentStep / steps;
+                    
+                    // Cubic ease out for more natural motion
+                    double easedProgress = 1 - Math.Pow(1 - progress, 3);
+                    
+                    // Animate opacity
+                    this.Opacity = 1 - easedProgress;
+                    
+                    // Animate scale (subtle shrink effect)
+                    scaleTransform.ScaleX = 1 - (0.05 * easedProgress);
+                    scaleTransform.ScaleY = 1 - (0.05 * easedProgress);
+                    
+                    // Animate position (subtle upward movement)
+                    translateTransform.Y = -5 * easedProgress;
+                };
+                
+                // Start the animation
+                animationTimer.Start();
+            }
+            else
+            {
+                // Fallback if animation can't be applied
+                base.Hide();
+            }
         }
 
         private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)

@@ -9,10 +9,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Animation;
 using Avalonia.Styling;
+using HoveringBallApp.LLM;
 using Avalonia.Threading;
 
 namespace HoveringBallApp
 {
+    public class ApiSelectionChangedEventArgs : EventArgs
+    {
+        public string ApiName { get; set; }
+        public string ModelName { get; set; }
+    }
+
     public class InputWindow : PopupWindow
     {
         private TextBox _inputText;
@@ -31,13 +38,8 @@ namespace HoveringBallApp
         public string SelectedApiName => _apiSelector?.SelectedItem?.ToString();
         public string SelectedModelName => _modelSelector?.SelectedItem?.ToString();
 
-        private OllamaClient _ollamaClient;
-
-        public InputWindow(string ollamaUrl = "http://localhost:11434") : base()
+        public InputWindow() : base()
         {
-            // Initialize Ollama client for model fetching
-            _ollamaClient = new OllamaClient(ollamaUrl);
-
             // Initialize UI elements
             _inputText = new TextBox
             {
@@ -71,7 +73,28 @@ namespace HoveringBallApp
                 Margin = new Thickness(5, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
-                VerticalContentAlignment = VerticalAlignment.Center
+                VerticalContentAlignment = VerticalAlignment.Center,
+                CornerRadius = new CornerRadius(16), // Perfectly rounded (circle)
+                RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative)
+            };
+            
+            // Add interactive hover animation
+            _refreshModelsButton.PointerEntered += (s, e) => 
+            {
+                _refreshModelsButton.RenderTransform = new ScaleTransform(1.1, 1.1);
+                _refreshModelsButton.Effect = new DropShadowEffect
+                {
+                    BlurRadius = 10,
+                    Opacity = 0.3,
+                    OffsetX = 0,
+                    OffsetY = 0,
+                    Color = Color.Parse("#60000000") // Subtle glow on hover
+                };
+            };
+            _refreshModelsButton.PointerExited += (s, e) => 
+            {
+                _refreshModelsButton.RenderTransform = new ScaleTransform(1.0, 1.0);
+                _refreshModelsButton.Effect = null;
             };
 
             _loadingIndicator = new ProgressBar
@@ -115,19 +138,39 @@ namespace HoveringBallApp
 
             var apiLabel = new TextBlock
             {
-                Text = "API Provider:",
+                Text = "AI Provider:",
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0),
                 FontSize = 13
             };
 
-            // Configure API selector with improved styling
+            // Configure API selector with fully rounded styling
             _apiSelector.Items.Add("Groq");
-            _apiSelector.Items.Add("Ollama");
+            _apiSelector.Items.Add("GLHF");
+            _apiSelector.Items.Add("OpenRouter");
+            _apiSelector.Items.Add("Cohere");
             _apiSelector.SelectedIndex = 0; // Default to Groq
             _apiSelector.SelectionChanged += ApiSelector_SelectionChanged;
             _apiSelector.MinHeight = 32;
             _apiSelector.VerticalContentAlignment = VerticalAlignment.Center;
+            _apiSelector.CornerRadius = new CornerRadius(14); // Fully rounded corners
+            
+            // Add interactive hover effect
+            _apiSelector.PointerEntered += (s, e) => 
+            {
+                _apiSelector.Effect = new DropShadowEffect
+                {
+                    BlurRadius = 10,
+                    Opacity = 0.2,
+                    OffsetX = 0,
+                    OffsetY = 2,
+                    Color = Color.Parse("#60000000") // Subtle shadow on hover
+                };
+            };
+            _apiSelector.PointerExited += (s, e) => 
+            {
+                _apiSelector.Effect = null;
+            };
 
             Grid.SetColumn(apiLabel, 0);
             Grid.SetColumn(_apiSelector, 1);
@@ -152,10 +195,28 @@ namespace HoveringBallApp
                 FontSize = 13
             };
 
-            // Configure model selector with enhanced styling
+            // Configure model selector with enhanced and fully rounded styling
             _modelSelector.SelectionChanged += ModelSelector_SelectionChanged;
             _modelSelector.MinHeight = 32;
             _modelSelector.VerticalContentAlignment = VerticalAlignment.Center;
+            _modelSelector.CornerRadius = new CornerRadius(14); // Fully rounded corners
+            
+            // Add interactive hover effect
+            _modelSelector.PointerEntered += (s, e) => 
+            {
+                _modelSelector.Effect = new DropShadowEffect
+                {
+                    BlurRadius = 10,
+                    Opacity = 0.2,
+                    OffsetX = 0,
+                    OffsetY = 2,
+                    Color = Color.Parse("#60000000") // Subtle shadow on hover
+                };
+            };
+            _modelSelector.PointerExited += (s, e) => 
+            {
+                _modelSelector.Effect = null;
+            };
 
             // Set tooltip using Avalonia's tooltip API
             ToolTip.SetTip(_refreshModelsButton, "Refresh available models");
@@ -175,11 +236,20 @@ namespace HoveringBallApp
             // Input area with improved layout
             var inputPanel = new Panel();
 
-            // Wrap TextBox in a border for better visual appearance
+            // Wrap TextBox in a border for better visual appearance with rounded edges
             var inputBorder = new Border
             {
                 Child = _inputText,
-                Margin = new Thickness(0, 6, 0, 0)
+                Margin = new Thickness(0, 6, 0, 0),
+                CornerRadius = new CornerRadius(14), // Fully rounded corners
+                BoxShadow = new BoxShadows(new BoxShadow
+                {
+                    OffsetX = 0,
+                    OffsetY = 2,
+                    Blur = 8,
+                    Spread = 0,
+                    Color = Color.Parse("#20000000") // Subtle shadow for depth
+                })
             };
 
             inputPanel.Children.Add(inputBorder);
@@ -197,10 +267,23 @@ namespace HoveringBallApp
             var clearButton = new Button
             {
                 Content = "Clear",
-                Padding = new Thickness(12, 6, 12, 6),
-                VerticalAlignment = VerticalAlignment.Center
+                Padding = new Thickness(12, 8, 12, 8),
+                VerticalAlignment = VerticalAlignment.Center,
+                CornerRadius = new CornerRadius(14), // Fully rounded corners
+                // Add subtle hover transform
+                RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative)
             };
             clearButton.Click += ClearButton_Click;
+            
+            // Add interactive hover animation to clear button
+            clearButton.PointerEntered += (s, e) => 
+            {
+                clearButton.RenderTransform = new ScaleTransform(1.05, 1.05);
+            };
+            clearButton.PointerExited += (s, e) => 
+            {
+                clearButton.RenderTransform = new ScaleTransform(1.0, 1.0);
+            };
 
             // Create path-based icon for the send button
             _sendIcon = new PathIcon
@@ -220,9 +303,34 @@ namespace HoveringBallApp
                         _sendIcon
                     }
                 },
-                Padding = new Thickness(15, 6, 15, 6),
+                Padding = new Thickness(15, 8, 15, 8),
                 IsDefault = true,
-                HorizontalAlignment = HorizontalAlignment.Right
+                HorizontalAlignment = HorizontalAlignment.Right,
+                CornerRadius = new CornerRadius(14), // Fully rounded corners
+                // Add transform origin for hover effect
+                RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+                Classes = { "PrimaryButton" } // Add class for styling
+            };
+            
+            // Add interactive hover animation to submit button
+            submitButton.PointerEntered += (s, e) => 
+            {
+                submitButton.RenderTransform = new ScaleTransform(1.05, 1.05);
+                
+                // Add a subtle glow effect on hover
+                submitButton.Effect = new DropShadowEffect
+                {
+                    BlurRadius = 12,
+                    Opacity = 0.4,
+                    OffsetX = 0,
+                    OffsetY = 0,
+                    Color = Color.Parse("#4080FFFF") // Subtle blue glow
+                };
+            };
+            submitButton.PointerExited += (s, e) => 
+            {
+                submitButton.RenderTransform = new ScaleTransform(1.0, 1.0);
+                submitButton.Effect = null;
             };
             submitButton.Click += SubmitButton_Click;
 
@@ -252,13 +360,20 @@ namespace HoveringBallApp
 
             var selectedApi = _apiSelector.SelectedItem?.ToString();
 
-            if (selectedApi == "Groq")
+            switch (selectedApi)
             {
-                PopulateGroqModels();
-            }
-            else if (selectedApi == "Ollama")
-            {
-                PopulateOllamaModels();
+                case "Groq":
+                    PopulateGroqModels();
+                    break;
+                case "GLHF":
+                    PopulateGLHFModels();
+                    break;
+                case "OpenRouter":
+                    PopulateOpenRouterModels();
+                    break;
+                case "Cohere":
+                    PopulateCohereModels();
+                    break;
             }
 
             // Notify of API selection change
@@ -290,10 +405,11 @@ namespace HoveringBallApp
             _modelSelector.Items.Clear();
 
             // Add Groq models
-            _modelSelector.Items.Add("llama3-8b-8192");
-            _modelSelector.Items.Add("llama3-70b-8192");
-            _modelSelector.Items.Add("mixtral-8x7b-32768");
-            _modelSelector.Items.Add("gemma-7b-it");
+            var models = LLMClientFactory.GetAvailableModels(LLMProvider.Groq);
+            foreach (var model in models)
+            {
+                _modelSelector.Items.Add(model);
+            }
 
             _modelSelector.SelectedIndex = 0;
             _refreshModelsButton.IsVisible = false;
@@ -301,58 +417,67 @@ namespace HoveringBallApp
             _programmaticChange = false;
         }
 
-        private async void PopulateOllamaModels()
+        private void PopulateGLHFModels()
         {
             if (_modelSelector == null || _refreshModelsButton == null) return;
 
             _programmaticChange = true;
 
             _modelSelector.Items.Clear();
-            _modelSelector.Items.Add("Loading models...");
+
+            // Add GLHF models
+            var models = LLMClientFactory.GetAvailableModels(LLMProvider.GLHF);
+            foreach (var model in models)
+            {
+                _modelSelector.Items.Add(model);
+            }
+
             _modelSelector.SelectedIndex = 0;
-            _modelSelector.IsEnabled = false;
-            _refreshModelsButton.IsVisible = true;
-            _loadingIndicator.IsVisible = true;
+            _refreshModelsButton.IsVisible = false;
 
-            try
+            _programmaticChange = false;
+        }
+
+        private void PopulateOpenRouterModels()
+        {
+            if (_modelSelector == null || _refreshModelsButton == null) return;
+
+            _programmaticChange = true;
+
+            _modelSelector.Items.Clear();
+
+            // Add OpenRouter models
+            var models = LLMClientFactory.GetAvailableModels(LLMProvider.OpenRouter);
+            foreach (var model in models)
             {
-                var models = await _ollamaClient.GetAvailableModels();
-
-                _modelSelector.Items.Clear();
-
-                if (models.Count > 0)
-                {
-                    foreach (var model in models)
-                    {
-                        _modelSelector.Items.Add(model);
-                    }
-                    _modelSelector.SelectedIndex = 0;
-                }
-                else
-                {
-                    // Add default models if none available
-                    _modelSelector.Items.Add("llama3");
-                    _modelSelector.Items.Add("deepseek-r1:1.5b");
-                    _modelSelector.Items.Add("mistral");
-                    _modelSelector.SelectedIndex = 0;
-                }
+                _modelSelector.Items.Add(model);
             }
-            catch (Exception ex)
+
+            _modelSelector.SelectedIndex = 0;
+            _refreshModelsButton.IsVisible = false;
+
+            _programmaticChange = false;
+        }
+
+        private void PopulateCohereModels()
+        {
+            if (_modelSelector == null || _refreshModelsButton == null) return;
+
+            _programmaticChange = true;
+
+            _modelSelector.Items.Clear();
+
+            // Add Cohere models
+            var models = LLMClientFactory.GetAvailableModels(LLMProvider.Cohere);
+            foreach (var model in models)
             {
-                _modelSelector.Items.Clear();
-                _modelSelector.Items.Add("deepseek-r1:1.5b");
-                _modelSelector.Items.Add("llama3");
-                _modelSelector.Items.Add("mistral");
-                _modelSelector.SelectedIndex = 0;
+                _modelSelector.Items.Add(model);
+            }
 
-                Console.WriteLine($"Error fetching Ollama models: {ex.Message}");
-            }
-            finally
-            {
-                _modelSelector.IsEnabled = true;
-                _programmaticChange = false;
-                _loadingIndicator.IsVisible = false;
-            }
+            _modelSelector.SelectedIndex = 0;
+            _refreshModelsButton.IsVisible = false;
+
+            _programmaticChange = false;
         }
 
         private async void RefreshModelsButton_Click(object sender, RoutedEventArgs e)
@@ -367,33 +492,101 @@ namespace HoveringBallApp
                 // Store current selection if any
                 string currentSelection = _modelSelector.SelectedItem?.ToString();
 
-                // Visual feedback for refresh - add rotation animation
-                var rotateAnimation = new Animation
-                {
-                    Duration = TimeSpan.FromSeconds(0.5),
-                    FillMode = Avalonia.Animation.FillMode.Both,
-                    IterationCount = new IterationCount(1),
-                    PlaybackDirection = PlaybackDirection.Normal
-                };
-
-                rotateAnimation.Children.Add(new KeyFrame
-                {
-                    Cue = new Cue(0.0),
-                    Setters = { new Setter(RotateTransform.AngleProperty, 0.0) }
-                });
-
-                rotateAnimation.Children.Add(new KeyFrame
-                {
-                    Cue = new Cue(1.0),
-                    Setters = { new Setter(RotateTransform.AngleProperty, 360.0) }
-                });
-
+                // Enhanced visual feedback for refresh with more fluid animation
                 _refreshModelsButton.RenderTransform = new RotateTransform(0);
                 _refreshModelsButton.RenderTransformOrigin = RelativePoint.Center;
-                rotateAnimation.RunAsync((Animatable)_refreshModelsButton.RenderTransform);
+                
+                // Use timer-based animation for more control over easing
+                var rotateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps
+                double startTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                double duration = 800; // Longer duration (800ms) for more fluid rotation
+                double startAngle = 0;
+                
+                rotateTimer.Tick += (s, args) =>
+                {
+                    double elapsed = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - startTime;
+                    double progress = Math.Min(1.0, elapsed / duration);
+                    
+                    // Custom easing function for rotation - starts fast, slows at end
+                    double easedProgress = 1 - Math.Pow(1 - progress, 2.5);
+                    
+                    // Apply rotation with slight overshoot and bounce at the end
+                    double targetAngle = 360;
+                    double overshootFactor = 0;
+                    
+                    if (progress > 0.8)
+                    {
+                        // Add slight bounce/elastic effect at the end of rotation
+                        double bounceProgress = (progress - 0.8) / 0.2; // Normalize to 0-1 for last 20%
+                        overshootFactor = Math.Sin(bounceProgress * Math.PI) * 15; // Max 15 degree overshoot
+                    }
+                    
+                    double currentAngle = startAngle + (easedProgress * targetAngle) + overshootFactor;
+                    
+                    if (_refreshModelsButton.RenderTransform is RotateTransform transform)
+                    {
+                        transform.Angle = currentAngle;
+                    }
+                    
+                    if (progress >= 1.0)
+                    {
+                        rotateTimer.Stop();
+                    }
+                };
+                
+                rotateTimer.Start();
+                
+                // Add subtle pulsing glow during refresh
+                var glowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                double glowStartTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                double glowDuration = duration; // Match rotation duration
+                
+                glowTimer.Tick += (s, args) =>
+                {
+                    double elapsed = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - glowStartTime;
+                    double progress = Math.Min(1.0, elapsed / glowDuration);
+                    
+                    // Create pulsing glow effect
+                    double pulseIntensity = Math.Sin(progress * Math.PI * 2) * 0.5 + 0.5; // Oscillate between 0-1
+                    
+                    _refreshModelsButton.Effect = new DropShadowEffect
+                    {
+                        BlurRadius = 10 + (pulseIntensity * 8),
+                        Opacity = 0.3 + (pulseIntensity * 0.2),
+                        OffsetX = 0,
+                        OffsetY = 0,
+                        Color = Color.Parse("#60A0A0FF") // Subtle blue glow
+                    };
+                    
+                    if (progress >= 1.0)
+                    {
+                        _refreshModelsButton.Effect = null;
+                        glowTimer.Stop();
+                    }
+                };
+                
+                glowTimer.Start();
 
-                // Load models again
-                await Task.Run(() => PopulateOllamaModels());
+                // Simulate fetching models (in a real app, you'd call the appropriate API)
+                await Task.Delay(500);
+
+                // Refresh models based on current provider
+                var selectedApi = _apiSelector.SelectedItem?.ToString();
+                switch (selectedApi)
+                {
+                    case "Groq":
+                        PopulateGroqModels();
+                        break;
+                    case "GLHF":
+                        PopulateGLHFModels();
+                        break;
+                    case "OpenRouter":
+                        PopulateOpenRouterModels();
+                        break;
+                    case "Cohere":
+                        PopulateCohereModels();
+                        break;
+                }
 
                 // Try to restore selection
                 if (!string.IsNullOrEmpty(currentSelection) && _modelSelector.Items.Contains(currentSelection))
@@ -439,66 +632,143 @@ namespace HoveringBallApp
                 var text = _inputText.Text;
                 _inputText.Text = string.Empty;
 
-                // Show brief animation on submit
-                var animation = new Animation
+                // Create more advanced animations for submit
+                if (_sendIcon != null && MainBorder != null)
                 {
-                    Duration = TimeSpan.FromSeconds(0.3),
-                    FillMode = Avalonia.Animation.FillMode.Forward
-                };
-
-                animation.Children.Add(new KeyFrame
-                {
-                    Cue = new Cue(0.0),
-                    Setters = { new Setter(OpacityProperty, 1.0) }
-                });
-
-                animation.Children.Add(new KeyFrame
-                {
-                    Cue = new Cue(1.0),
-                    Setters = { new Setter(OpacityProperty, 0.0) }
-                });
-
-                _sendIcon.RenderTransform = new TranslateTransform(0, 0);
-
-                // Create simple animation for the icon's transform
-                var translateTransform = _sendIcon.RenderTransform as TranslateTransform;
-                if (translateTransform != null)
-                {
-                    // Use timer-based animation to solve the casting issue
-                    int steps = 20;
-                    int currentStep = 0;
-                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
-                    timer.Tick += (s, args) =>
+                    // Prepare the send icon for animation
+                    _sendIcon.RenderTransform = new TranslateTransform(0, 0);
+                    _sendIcon.RenderTransformOrigin = RelativePoint.Center;
+                    
+                    // Create a fluid trajectory animation for the send icon
+                    var translateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps
+                    double startTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                    double duration = 250; // 250ms duration - faster for more responsive feel
+                    
+                    translateTimer.Tick += (s, e) =>
                     {
-                        currentStep++;
-                        if (currentStep > steps)
+                        double elapsed = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - startTime;
+                        double progress = Math.Min(1.0, elapsed / duration);
+                        
+                        // Cubic ease out for more natural motion
+                        double easedProgress = 1 - Math.Pow(1 - progress, 3);
+                        
+                        // Create an arc trajectory (combination of X and Y movement)
+                        if (_sendIcon.RenderTransform is TranslateTransform transform)
                         {
-                            timer.Stop();
-                            return;
+                            // Move horizontally and slightly upward in an arc
+                            transform.X = 30 * easedProgress;
+                            
+                            // Create a parabolic arc - first up, then down
+                            double arcHeight = 15;
+                            double arcProgress = 4 * easedProgress * (1 - easedProgress); // Peaks at 0.5
+                            transform.Y = -arcHeight * arcProgress;
                         }
-
-                        double progress = (double)currentStep / steps;
-                        double easedProgress = EaseOutCubic(progress);
-                        translateTransform.X = 20.0 * easedProgress;
+                        
+                        // Gradually fade out
+                        _sendIcon.Opacity = 1 - easedProgress;
+                        
+                        if (progress >= 1.0)
+                        {
+                            translateTimer.Stop();
+                        }
                     };
-                    timer.Start();
+                    
+                    translateTimer.Start();
+                    
+                    // Create a pulse effect on the parent container
+                    var container = _sendIcon.Parent as Control;
+                    if (container != null)
+                    {
+                        // Add a quick scale pulse to the container
+                        var scaleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                        double scaleStartTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                        double scaleDuration = 200; // 200ms duration
+                        
+                        // Apply a scale transform to the container
+                        container.RenderTransformOrigin = RelativePoint.Center;
+                        container.RenderTransform = new ScaleTransform(1, 1);
+                        
+                        scaleTimer.Tick += (s, e) =>
+                        {
+                            double elapsed = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - scaleStartTime;
+                            double progress = Math.Min(1.0, elapsed / scaleDuration);
+                            
+                            if (container.RenderTransform is ScaleTransform scaleTransform)
+                            {
+                                // First expand slightly, then contract
+                                double scaleProgress = Math.Sin(progress * Math.PI);
+                                double scaleFactor = 1 + (0.1 * scaleProgress);
+                                
+                                scaleTransform.ScaleX = scaleFactor;
+                                scaleTransform.ScaleY = scaleFactor;
+                            }
+                            
+                            if (progress >= 1.0)
+                            {
+                                scaleTimer.Stop();
+                            }
+                        };
+                        
+                        scaleTimer.Start();
+                    }
+                    
+                    // Create a smooth transition out for the whole window
+                    var transformGroup = new TransformGroup();
+                    var scaleTransform = new ScaleTransform(1, 1);
+                    var translateTransform = new TranslateTransform(0, 0);
+                    transformGroup.Children.Add(scaleTransform);
+                    transformGroup.Children.Add(translateTransform);
+                    MainBorder.RenderTransform = transformGroup;
+                    
+                    // Animate the main border shrinking and moving up with timer
+                    var windowAnimTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                    double windowStartTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                    double windowDuration = 300; // 300ms for window close
+                    
+                    windowAnimTimer.Tick += (s, e) =>
+                    {
+                        double elapsed = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - windowStartTime;
+                        double progress = Math.Min(1.0, elapsed / windowDuration);
+                        
+                        // Add easing
+                        double easedProgress = 1 - Math.Pow(1 - progress, 2); // Quadratic ease out
+                        
+                        // Gradually fade out
+                        this.Opacity = 1 - easedProgress;
+                        
+                        // Shrink and move upward
+                        scaleTransform.ScaleX = 1 - (0.05 * easedProgress);
+                        scaleTransform.ScaleY = 1 - (0.05 * easedProgress);
+                        translateTransform.Y = -10 * easedProgress;
+                        
+                        if (progress >= 1.0)
+                        {
+                            windowAnimTimer.Stop();
+                            
+                            // Notify the main window of submitted text
+                            TextSubmitted?.Invoke(this, text);
+                            
+                            // Hide after animation completes
+                            Dispatcher.UIThread.Post(() => base.Hide(), DispatcherPriority.Background);
+                        }
+                    };
+                    
+                    // Start window animation after a short delay
+                    var delayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                    delayTimer.Tick += (s, e) =>
+                    {
+                        windowAnimTimer.Start();
+                        delayTimer.Stop();
+                    };
+                    delayTimer.Start();
                 }
-
-                // Apply fade animation directly to the send icon
-                animation.RunAsync(_sendIcon);
-
-                // Notify the main window
-                TextSubmitted?.Invoke(this, text);
-
-                // Hide this window
-                this.Hide();
+                else
+                {
+                    // Fallback if animation can't be applied
+                    TextSubmitted?.Invoke(this, text);
+                    this.Hide();
+                }
             }
-        }
-
-        // Easing function for animation
-        private double EaseOutCubic(double t)
-        {
-            return 1 - Math.Pow(1 - t, 3);
         }
 
         private void UpdateTextWrapping()
@@ -532,59 +802,75 @@ namespace HoveringBallApp
 
             _programmaticChange = true;
 
-            if (apiName == "Groq")
+            // Set the API selector
+            int apiIndex = -1;
+            switch (apiName)
             {
-                _apiSelector.SelectedIndex = 0;
-                PopulateGroqModels();
-
-                if (!string.IsNullOrEmpty(modelName) && _modelSelector.Items.Contains(modelName))
-                {
-                    _modelSelector.SelectedItem = modelName;
-                }
+                case "Groq":
+                    apiIndex = 0;
+                    break;
+                case "GLHF":
+                    apiIndex = 1;
+                    break;
+                case "OpenRouter":
+                    apiIndex = 2;
+                    break;
+                case "Cohere":
+                    apiIndex = 3;
+                    break;
             }
-            else if (apiName == "Ollama")
+
+            if (apiIndex >= 0 && apiIndex < _apiSelector.Items.Count)
             {
-                _apiSelector.SelectedIndex = 1;
+                _apiSelector.SelectedIndex = apiIndex;
+            }
+            else
+            {
+                _apiSelector.SelectedIndex = 0; // Default to Groq
+            }
 
-                // We'll set the model after loading the list
-                string desiredModel = modelName;
+            // Load models for the selected API
+            switch (apiName)
+            {
+                case "Groq":
+                    PopulateGroqModels();
+                    break;
+                case "GLHF":
+                    PopulateGLHFModels();
+                    break;
+                case "OpenRouter":
+                    PopulateOpenRouterModels();
+                    break;
+                case "Cohere":
+                    PopulateCohereModels();
+                    break;
+                default:
+                    PopulateGroqModels(); // Default to Groq
+                    break;
+            }
 
-                _programmaticChange = false;
-                PopulateOllamaModels();
-
-                // The model will be set after loading if available
-                if (!string.IsNullOrEmpty(desiredModel))
+            // Set the selected model if available
+            if (!string.IsNullOrEmpty(modelName))
+            {
+                // Wait a moment for models to load then set selection
+                var timer = new Avalonia.Threading.DispatcherTimer
                 {
-                    // Wait a moment for models to load then set selection
-                    var timer = new Avalonia.Threading.DispatcherTimer
+                    Interval = TimeSpan.FromMilliseconds(100)
+                };
+
+                timer.Tick += (s, e) =>
+                {
+                    if (_modelSelector.Items.Contains(modelName))
                     {
-                        Interval = TimeSpan.FromMilliseconds(500)
-                    };
+                        _modelSelector.SelectedItem = modelName;
+                    }
+                    timer.Stop();
+                };
 
-                    timer.Tick += (s, e) =>
-                    {
-                        if (_modelSelector.Items.Contains(desiredModel))
-                        {
-                            _programmaticChange = true;
-                            _modelSelector.SelectedItem = desiredModel;
-                            _programmaticChange = false;
-                        }
-                        timer.Stop();
-                    };
-
-                    timer.Start();
-                }
-
-                return; // Return early since we're setting the model asynchronously
+                timer.Start();
             }
 
             _programmaticChange = false;
         }
-    }
-
-    public class ApiSelectionChangedEventArgs : EventArgs
-    {
-        public string ApiName { get; set; }
-        public string ModelName { get; set; }
     }
 }

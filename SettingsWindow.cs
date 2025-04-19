@@ -9,65 +9,77 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Avalonia.Styling;
+using HoveringBallApp.LLM;
 
 namespace HoveringBallApp
 {
+    public class SettingsChangedEventArgs : EventArgs
+    {
+        public LLMProvider Provider { get; set; }
+        public string Model { get; set; }
+        public bool MemorySettingsChanged { get; set; }
+    }
+
     public class SettingsWindow : PopupWindow
     {
         // Settings properties
         private string _groqApiKey = "";
-        private string _ollamaUrl = "";
-        private string _ollamaModel = "";
-        private string _searxngUrl = "";
-        private bool _webSearchEnabled;
-        private MainWindow.ApiMode _currentApiMode;
+        private string _glhfApiKey = "";
+        private string _openRouterApiKey = "";
+        private string _cohereApiKey = "";
+        private LLMProvider _currentProvider = LLMProvider.Groq;
+        private string _currentModel = "";
+        private bool _useMemorySystem = true;
 
         // UI elements
-        private TextBox? _groqApiKeyTextBox;
-        private TextBox? _ollamaUrlTextBox;
-        private ComboBox? _ollamaModelComboBox;
-        private TextBox? _searxngUrlTextBox;
-        private CheckBox? _webSearchEnabledCheckBox;
-        private RadioButton? _groqRadioButton;
-        private RadioButton? _ollamaRadioButton;
-        private ProgressBar? _loadingIndicator;
-        private Button? _refreshModelsButton;
+        private TextBox _groqApiKeyTextBox;
+        private TextBox _glhfApiKeyTextBox;
+        private TextBox _openRouterApiKeyTextBox;
+        private TextBox _cohereApiKeyTextBox;
+        private RadioButton _groqRadioButton;
+        private RadioButton _glhfRadioButton;
+        private RadioButton _openRouterRadioButton;
+        private RadioButton _cohereRadioButton;
+        private ComboBox _modelComboBox;
+        private ProgressBar _loadingIndicator;
+        private Button _refreshModelsButton;
+        private CheckBox _useMemorySystemCheckBox;
+
+        // Configuration manager
+        private ConfigurationManager _config;
 
         // Event when settings change
-        public event EventHandler? SettingsChanged;
+        public event EventHandler<SettingsChangedEventArgs> SettingsChanged;
 
-        // Properties to access settings
-        public string GroqApiKey => _groqApiKey;
-        public string OllamaUrl => _ollamaUrl;
-        public string OllamaModel => _ollamaModel;
-        public string SearxngUrl => _searxngUrl;
-        public bool WebSearchEnabled => _webSearchEnabled;
-        public MainWindow.ApiMode CurrentApiMode => _currentApiMode;
-
-        public SettingsWindow() : base()
+        public SettingsWindow(ConfigurationManager config) : base()
         {
             SetTitle("Assistant Settings");
 
-            // Default values
-            _groqApiKey = "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";
-            _ollamaUrl = "http://localhost:11434";
-            _ollamaModel = "llama3";
-            _searxngUrl = "http://localhost:8080";
-            _webSearchEnabled = true;
-            _currentApiMode = MainWindow.ApiMode.Groq;
+            _config = config;
+
+            // Load settings from configuration
+            _groqApiKey = _config.GroqApiKey;
+            _glhfApiKey = _config.GLHFApiKey;
+            _openRouterApiKey = _config.OpenRouterApiKey;
+            _cohereApiKey = _config.CohereApiKey;
+            _useMemorySystem = _config.UseMemorySystem;
 
             InitializeContent();
         }
 
         private void InitializeContent()
         {
+            // Add rounded window style to settings window
+            this.CornerRadius = new CornerRadius(20);
+            this.UseLayoutRounding = true;
+            
             var mainPanel = new StackPanel
             {
                 Spacing = 16,
-                Margin = new Thickness(5)
+                Margin = new Thickness(10)
             };
 
-            // Add brief introduction/description
+            // Add brief introduction
             var introPanel = new StackPanel
             {
                 Margin = new Thickness(0, 0, 0, 5)
@@ -75,7 +87,7 @@ namespace HoveringBallApp
 
             var introText = new TextBlock
             {
-                Text = "Configure how your assistant communicates with AI models",
+                Text = "Configure which AI model provider your assistant uses",
                 Opacity = 0.7,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 12),
@@ -85,27 +97,28 @@ namespace HoveringBallApp
             introPanel.Children.Add(introText);
             mainPanel.Children.Add(introPanel);
 
-            // API Mode selection with enhanced visuals
-            var apiModePanel = new StackPanel
+            // API Provider selection with enhanced visuals
+            var apiProviderPanel = new StackPanel
             {
                 Spacing = 6
             };
 
-            var apiModeLabel = new TextBlock
+            var apiProviderLabel = new TextBlock
             {
-                Text = "API Mode",
+                Text = "AI Provider",
                 FontWeight = FontWeight.Bold,
                 FontSize = 14
             };
 
-            var apiModeOptions = new StackPanel
+            var apiProviderOptions = new StackPanel
             {
-                Orientation = Orientation.Horizontal,
-                Spacing = 15,
+                Orientation = Orientation.Vertical,
+                Spacing = 8,
                 Margin = new Thickness(0, 8, 0, 0)
             };
 
-            // Create better looking radio buttons with icons
+            // Create radio buttons for each provider
+            // Groq
             var groqPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -115,7 +128,7 @@ namespace HoveringBallApp
             _groqRadioButton = new RadioButton
             {
                 Content = "Groq API",
-                IsChecked = _currentApiMode == MainWindow.ApiMode.Groq,
+                IsChecked = _currentProvider == LLMProvider.Groq,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Padding = new Thickness(8, 6, 8, 6)
             };
@@ -124,7 +137,8 @@ namespace HoveringBallApp
             {
                 if (_groqRadioButton.IsChecked == true)
                 {
-                    _currentApiMode = MainWindow.ApiMode.Groq;
+                    _currentProvider = LLMProvider.Groq;
+                    UpdateModelsList();
                     NotifySettingsChanged();
                 }
             };
@@ -139,53 +153,197 @@ namespace HoveringBallApp
 
             groqPanel.Children.Add(_groqRadioButton);
 
-            var ollamaPanel = new StackPanel
+            // GLHF
+            var glhfPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 6
             };
 
-            _ollamaRadioButton = new RadioButton
+            _glhfRadioButton = new RadioButton
             {
-                Content = "Ollama (Local)",
-                IsChecked = _currentApiMode == MainWindow.ApiMode.Ollama,
+                Content = "GLHF API",
+                IsChecked = _currentProvider == LLMProvider.GLHF,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Padding = new Thickness(8, 6, 8, 6)
             };
 
-            _ollamaRadioButton.IsCheckedChanged += (s, e) =>
+            _glhfRadioButton.IsCheckedChanged += (s, e) =>
             {
-                if (_ollamaRadioButton.IsChecked == true)
+                if (_glhfRadioButton.IsChecked == true)
                 {
-                    _currentApiMode = MainWindow.ApiMode.Ollama;
+                    _currentProvider = LLMProvider.GLHF;
+                    UpdateModelsList();
                     NotifySettingsChanged();
                 }
             };
 
-            var ollamaIcon = new PathIcon
+            var glhfIcon = new PathIcon
             {
-                Data = Geometry.Parse("M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"),
+                Data = Geometry.Parse("M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM8 15c0-1.66 1.34-3 3-3 .35 0 .69.07 1 .18V6h5v2h-3v7.03c-.02 1.64-1.35 2.97-3 2.97-1.66 0-3-1.34-3-3z"),
                 Width = 18,
                 Height = 18,
                 Margin = new Thickness(0, 0, 5, 0)
             };
 
-            ollamaPanel.Children.Add(_ollamaRadioButton);
+            glhfPanel.Children.Add(_glhfRadioButton);
 
-            apiModeOptions.Children.Add(groqPanel);
-            apiModeOptions.Children.Add(ollamaPanel);
+            // OpenRouter
+            var openRouterPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 6
+            };
 
-            apiModePanel.Children.Add(apiModeLabel);
-            apiModePanel.Children.Add(apiModeOptions);
+            _openRouterRadioButton = new RadioButton
+            {
+                Content = "OpenRouter API",
+                IsChecked = _currentProvider == LLMProvider.OpenRouter,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(8, 6, 8, 6)
+            };
 
-            // Groq Settings with enhanced visuals
-            var groqPanel2 = new StackPanel
+            _openRouterRadioButton.IsCheckedChanged += (s, e) =>
+            {
+                if (_openRouterRadioButton.IsChecked == true)
+                {
+                    _currentProvider = LLMProvider.OpenRouter;
+                    UpdateModelsList();
+                    NotifySettingsChanged();
+                }
+            };
+
+            var openRouterIcon = new PathIcon
+            {
+                Data = Geometry.Parse("M4 19h16v2H4v-2zm5-4h11v2H9v-2zm-5-4h16v2H4v-2zm5-4h11v2H9V7zM4 3h16v2H4V3z"),
+                Width = 18,
+                Height = 18,
+                Margin = new Thickness(0, 0, 5, 0)
+            };
+
+            openRouterPanel.Children.Add(_openRouterRadioButton);
+
+            // Cohere
+            var coherePanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 6
+            };
+
+            _cohereRadioButton = new RadioButton
+            {
+                Content = "Cohere API",
+                IsChecked = _currentProvider == LLMProvider.Cohere,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(8, 6, 8, 6)
+            };
+
+            _cohereRadioButton.IsCheckedChanged += (s, e) =>
+            {
+                if (_cohereRadioButton.IsChecked == true)
+                {
+                    _currentProvider = LLMProvider.Cohere;
+                    UpdateModelsList();
+                    NotifySettingsChanged();
+                }
+            };
+
+            var cohereIcon = new PathIcon
+            {
+                Data = Geometry.Parse("M12 3L1 9l11 6l11-6l-11-6zM1 9v6l11 6l11-6V9L12 15L1 9z"),
+                Width = 18,
+                Height = 18,
+                Margin = new Thickness(0, 0, 5, 0)
+            };
+
+            coherePanel.Children.Add(_cohereRadioButton);
+
+            apiProviderOptions.Children.Add(groqPanel);
+            apiProviderOptions.Children.Add(glhfPanel);
+            apiProviderOptions.Children.Add(openRouterPanel);
+            apiProviderOptions.Children.Add(coherePanel);
+
+            apiProviderPanel.Children.Add(apiProviderLabel);
+            apiProviderPanel.Children.Add(apiProviderOptions);
+
+            // Model Selection with improved layout
+            var modelSelectionPanel = new StackPanel
+            {
+                Spacing = 6,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+
+            var modelLabel = new TextBlock
+            {
+                Text = "Model",
+                FontWeight = FontWeight.Bold,
+                FontSize = 14
+            };
+
+            // Create a grid for model selection with refresh button
+            var modelSelectionGrid = new Grid();
+            modelSelectionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            modelSelectionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _modelComboBox = new ComboBox
+            {
+                Width = 280,
+                MinHeight = 35,
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+
+            // Add event handler for selection changed
+            _modelComboBox.SelectionChanged += (s, e) =>
+            {
+                if (_modelComboBox.SelectedItem != null)
+                {
+                    _currentModel = _modelComboBox.SelectedItem.ToString();
+                    NotifySettingsChanged();
+                }
+            };
+
+            // Refresh models button with better styling
+            _refreshModelsButton = new Button
+            {
+                Content = "↻",
+                Width = 35,
+                Height = 35,
+                Margin = new Thickness(10, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            ToolTip.SetTip(_refreshModelsButton, "Refresh Models");
+            _refreshModelsButton.Click += RefreshModelsButton_Click;
+
+            Grid.SetColumn(_modelComboBox, 0);
+            Grid.SetColumn(_refreshModelsButton, 1);
+
+            modelSelectionGrid.Children.Add(_modelComboBox);
+            modelSelectionGrid.Children.Add(_refreshModelsButton);
+
+            // Add loading indicator
+            _loadingIndicator = new ProgressBar
+            {
+                IsIndeterminate = true,
+                Height = 2,
+                Margin = new Thickness(0, 6, 0, 6),
+                IsVisible = false
+            };
+
+            modelSelectionPanel.Children.Add(modelLabel);
+            modelSelectionPanel.Children.Add(modelSelectionGrid);
+            modelSelectionPanel.Children.Add(_loadingIndicator);
+
+            // API Key Settings with enhanced visuals
+            // Groq API Key
+            var groqApiKeyPanel = new StackPanel
             {
                 Spacing = 6,
                 Margin = new Thickness(0, 5, 0, 5)
             };
 
-            var groqLabel = new TextBlock
+            var groqApiKeyLabel = new TextBlock
             {
                 Text = "Groq API Key",
                 FontWeight = FontWeight.Medium,
@@ -205,11 +363,12 @@ namespace HoveringBallApp
                 if (_groqApiKeyTextBox != null)
                 {
                     _groqApiKey = _groqApiKeyTextBox.Text;
+                    _config.UpdateApiKey("groq", _groqApiKey);
                     NotifySettingsChanged();
                 }
             };
 
-            var groqHint = new TextBlock
+            var groqApiKeyHint = new TextBlock
             {
                 Text = "Get your API key from https://console.groq.com/keys",
                 Opacity = 0.7,
@@ -217,186 +376,198 @@ namespace HoveringBallApp
                 Margin = new Thickness(0, 4, 0, 0)
             };
 
-            groqPanel2.Children.Add(groqLabel);
-            groqPanel2.Children.Add(_groqApiKeyTextBox);
-            groqPanel2.Children.Add(groqHint);
+            groqApiKeyPanel.Children.Add(groqApiKeyLabel);
+            groqApiKeyPanel.Children.Add(_groqApiKeyTextBox);
+            groqApiKeyPanel.Children.Add(groqApiKeyHint);
 
-            // Ollama Settings with enhanced visuals
-            var ollamaPanel2 = new StackPanel
+            // GLHF API Key
+            var glhfApiKeyPanel = new StackPanel
             {
                 Spacing = 6,
                 Margin = new Thickness(0, 5, 0, 5)
             };
 
-            var ollamaUrlLabel = new TextBlock
+            var glhfApiKeyLabel = new TextBlock
             {
-                Text = "Ollama URL",
+                Text = "GLHF API Key",
                 FontWeight = FontWeight.Medium,
                 FontSize = 13
             };
 
-            _ollamaUrlTextBox = new TextBox
+            _glhfApiKeyTextBox = new TextBox
             {
-                Text = _ollamaUrl,
-                Watermark = "http://localhost:11434",
-                MinHeight = 35
-            };
-            _ollamaUrlTextBox.LostFocus += (s, e) =>
-            {
-                if (_ollamaUrlTextBox != null)
-                {
-                    _ollamaUrl = _ollamaUrlTextBox.Text;
-                    NotifySettingsChanged();
-                }
-            };
-
-            var ollamaModelLabel = new TextBlock
-            {
-                Text = "Ollama Model",
-                FontWeight = FontWeight.Medium,
-                Margin = new Thickness(0, 10, 0, 0),
-                FontSize = 13
-            };
-
-            // Create a grid for model selection with refresh button
-            var modelSelectionGrid = new Grid();
-            modelSelectionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            modelSelectionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            _ollamaModelComboBox = new ComboBox
-            {
-                Width = 280,
+                Text = _glhfApiKey,
+                PasswordChar = '•',
+                Watermark = "Enter your GLHF API key",
                 MinHeight = 35,
-                HorizontalAlignment = HorizontalAlignment.Left
+                MaxWidth = 450
             };
-
-            // Add some default models
-            _ollamaModelComboBox.Items.Add("llama3");
-            _ollamaModelComboBox.Items.Add("mistral");
-            _ollamaModelComboBox.Items.Add("phi");
-
-            _ollamaModelComboBox.SelectedItem = _ollamaModel;
-            _ollamaModelComboBox.SelectionChanged += (s, e) =>
+            _glhfApiKeyTextBox.LostFocus += (s, e) =>
             {
-                if (_ollamaModelComboBox != null && _ollamaModelComboBox.SelectedItem != null)
+                if (_glhfApiKeyTextBox != null)
                 {
-                    _ollamaModel = _ollamaModelComboBox.SelectedItem.ToString() ?? "";
+                    _glhfApiKey = _glhfApiKeyTextBox.Text;
+                    _config.UpdateApiKey("glhf", _glhfApiKey);
                     NotifySettingsChanged();
                 }
             };
 
-            // Refresh models button with better styling
-            _refreshModelsButton = new Button
+            var glhfApiKeyHint = new TextBlock
             {
-                Content = "↻",
-                Width = 35,
-                Height = 35,
-                Margin = new Thickness(10, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalContentAlignment = HorizontalAlignment.Center,
-                VerticalContentAlignment = VerticalAlignment.Center
-            };
-            ToolTip.SetTip(_refreshModelsButton, "Refresh Models");
-            _refreshModelsButton.Click += RefreshModelsButton_Click;
-
-            Grid.SetColumn(_ollamaModelComboBox, 0);
-            Grid.SetColumn(_refreshModelsButton, 1);
-
-            modelSelectionGrid.Children.Add(_ollamaModelComboBox);
-            modelSelectionGrid.Children.Add(_refreshModelsButton);
-
-            // Add loading indicator
-            _loadingIndicator = new ProgressBar
-            {
-                IsIndeterminate = true,
-                Height = 2,
-                Margin = new Thickness(0, 6, 0, 6),
-                IsVisible = false
-            };
-
-            var ollamaHint = new TextBlock
-            {
-                Text = "Make sure Ollama is running locally to use local models",
+                Text = "Get your API key from https://glhf.ai",
                 Opacity = 0.7,
                 FontSize = 12,
-                Margin = new Thickness(0, 8, 0, 0)
+                Margin = new Thickness(0, 4, 0, 0)
             };
 
-            ollamaPanel2.Children.Add(ollamaUrlLabel);
-            ollamaPanel2.Children.Add(_ollamaUrlTextBox);
-            ollamaPanel2.Children.Add(ollamaModelLabel);
-            ollamaPanel2.Children.Add(modelSelectionGrid);
-            ollamaPanel2.Children.Add(_loadingIndicator);
-            ollamaPanel2.Children.Add(ollamaHint);
+            glhfApiKeyPanel.Children.Add(glhfApiKeyLabel);
+            glhfApiKeyPanel.Children.Add(_glhfApiKeyTextBox);
+            glhfApiKeyPanel.Children.Add(glhfApiKeyHint);
 
-            // SearXNG Settings with enhanced visuals
-            var searxngPanel = new StackPanel
+            // OpenRouter API Key
+            var openRouterApiKeyPanel = new StackPanel
             {
                 Spacing = 6,
                 Margin = new Thickness(0, 5, 0, 5)
             };
 
-            var searxngLabel = new TextBlock
+            var openRouterApiKeyLabel = new TextBlock
             {
-                Text = "SearXNG URL",
+                Text = "OpenRouter API Key",
                 FontWeight = FontWeight.Medium,
                 FontSize = 13
             };
 
-            _searxngUrlTextBox = new TextBox
+            _openRouterApiKeyTextBox = new TextBox
             {
-                Text = _searxngUrl,
-                Watermark = "http://localhost:8080",
-                MinHeight = 35
+                Text = _openRouterApiKey,
+                PasswordChar = '•',
+                Watermark = "Enter your OpenRouter API key",
+                MinHeight = 35,
+                MaxWidth = 450
             };
-            _searxngUrlTextBox.LostFocus += (s, e) =>
+            _openRouterApiKeyTextBox.LostFocus += (s, e) =>
             {
-                if (_searxngUrlTextBox != null)
+                if (_openRouterApiKeyTextBox != null)
                 {
-                    _searxngUrl = _searxngUrlTextBox.Text;
+                    _openRouterApiKey = _openRouterApiKeyTextBox.Text;
+                    _config.UpdateApiKey("openrouter", _openRouterApiKey);
                     NotifySettingsChanged();
                 }
             };
 
-            _webSearchEnabledCheckBox = new CheckBox
+            var openRouterApiKeyHint = new TextBlock
             {
-                Content = "Enable Web Search",
-                IsChecked = _webSearchEnabled,
+                Text = "Get your API key from https://openrouter.ai/keys",
+                Opacity = 0.7,
+                FontSize = 12,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
+            openRouterApiKeyPanel.Children.Add(openRouterApiKeyLabel);
+            openRouterApiKeyPanel.Children.Add(_openRouterApiKeyTextBox);
+            openRouterApiKeyPanel.Children.Add(openRouterApiKeyHint);
+
+            // Cohere API Key
+            var cohereApiKeyPanel = new StackPanel
+            {
+                Spacing = 6,
+                Margin = new Thickness(0, 5, 0, 5)
+            };
+
+            var cohereApiKeyLabel = new TextBlock
+            {
+                Text = "Cohere API Key",
+                FontWeight = FontWeight.Medium,
+                FontSize = 13
+            };
+
+            _cohereApiKeyTextBox = new TextBox
+            {
+                Text = _cohereApiKey,
+                PasswordChar = '•',
+                Watermark = "Enter your Cohere API key",
+                MinHeight = 35,
+                MaxWidth = 450
+            };
+            _cohereApiKeyTextBox.LostFocus += (s, e) =>
+            {
+                if (_cohereApiKeyTextBox != null)
+                {
+                    _cohereApiKey = _cohereApiKeyTextBox.Text;
+                    _config.UpdateApiKey("cohere", _cohereApiKey);
+                    NotifySettingsChanged();
+                }
+            };
+
+            var cohereApiKeyHint = new TextBlock
+            {
+                Text = "Get your API key from https://dashboard.cohere.com/api-keys",
+                Opacity = 0.7,
+                FontSize = 12,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
+            cohereApiKeyPanel.Children.Add(cohereApiKeyLabel);
+            cohereApiKeyPanel.Children.Add(_cohereApiKeyTextBox);
+            cohereApiKeyPanel.Children.Add(cohereApiKeyHint);
+
+            // Memory System Settings
+            var memoryPanel = new StackPanel
+            {
+                Spacing = 6,
+                Margin = new Thickness(0, 5, 0, 5)
+            };
+
+            var memoryLabel = new TextBlock
+            {
+                Text = "Memory System",
+                FontWeight = FontWeight.Bold,
+                FontSize = 14
+            };
+
+            _useMemorySystemCheckBox = new CheckBox
+            {
+                Content = "Enable Memory System",
+                IsChecked = _useMemorySystem,
                 Margin = new Thickness(0, 8, 0, 0)
             };
 
-            // Use PropertyChanged event instead of CheckedChanged for Avalonia's CheckBox
-            _webSearchEnabledCheckBox.PropertyChanged += (s, e) =>
+            _useMemorySystemCheckBox.PropertyChanged += (s, e) =>
             {
                 if (e.Property == CheckBox.IsCheckedProperty)
                 {
-                    _webSearchEnabled = _webSearchEnabledCheckBox.IsChecked == true;
-                    NotifySettingsChanged();
+                    _useMemorySystem = _useMemorySystemCheckBox.IsChecked == true;
+                    _config.UseMemorySystem = _useMemorySystem;
+                    NotifySettingsChanged(true);
                 }
             };
 
-            var searxngHint = new TextBlock
+            // Memory system is now fully in-memory
+
+            var memoryHint = new TextBlock
             {
-                Text = "SearXNG provides web search capabilities to your assistant",
+                Text = "The memory system allows Claude to remember previous conversations with remarkable contextual awareness",
                 Opacity = 0.7,
                 FontSize = 12,
                 Margin = new Thickness(0, 6, 0, 0)
             };
 
-            searxngPanel.Children.Add(searxngLabel);
-            searxngPanel.Children.Add(_searxngUrlTextBox);
-            searxngPanel.Children.Add(_webSearchEnabledCheckBox);
-            searxngPanel.Children.Add(searxngHint);
+            memoryPanel.Children.Add(memoryLabel);
+            memoryPanel.Children.Add(_useMemorySystemCheckBox);
+            memoryPanel.Children.Add(memoryHint);
 
             // Add all panels to main panel with separators
-            mainPanel.Children.Add(CreateSeparator("API Configuration"));
-            mainPanel.Children.Add(apiModePanel);
-            mainPanel.Children.Add(CreateSeparator("Groq Settings"));
-            mainPanel.Children.Add(groqPanel2);
-            mainPanel.Children.Add(CreateSeparator("Ollama Settings"));
-            mainPanel.Children.Add(ollamaPanel2);
-            mainPanel.Children.Add(CreateSeparator("Web Search"));
-            mainPanel.Children.Add(searxngPanel);
+            mainPanel.Children.Add(CreateSeparator("Provider Selection"));
+            mainPanel.Children.Add(apiProviderPanel);
+            mainPanel.Children.Add(modelSelectionPanel);
+            mainPanel.Children.Add(CreateSeparator("API Keys"));
+            mainPanel.Children.Add(groqApiKeyPanel);
+            mainPanel.Children.Add(glhfApiKeyPanel);
+            mainPanel.Children.Add(openRouterApiKeyPanel);
+            mainPanel.Children.Add(cohereApiKeyPanel);
+            mainPanel.Children.Add(CreateSeparator("Memory Settings"));
+            mainPanel.Children.Add(memoryPanel);
 
             // Save button with improved styling
             var buttonPanel = new StackPanel
@@ -409,7 +580,7 @@ namespace HoveringBallApp
 
             var cancelButton = new Button
             {
-                Content = "Cancel",
+                Content = "Close",
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Padding = new Thickness(15, 8, 15, 8)
             };
@@ -444,45 +615,61 @@ namespace HoveringBallApp
 
             // Add to content area
             AddContent(mainPanel);
+
+            // Initialize model list based on current provider
+            InitializeSelectedProvider();
+            UpdateModelsList();
         }
 
-        private Border CreateSeparator(string title)
+        private void InitializeSelectedProvider()
         {
-            var border = new Border
+            // Set the correct radio button based on _currentProvider
+            switch (_currentProvider)
             {
-                Height = 35,
-                Margin = new Thickness(0, 5, 0, 5)
-            };
+                case LLMProvider.Groq:
+                    _groqRadioButton.IsChecked = true;
+                    break;
+                case LLMProvider.GLHF:
+                    _glhfRadioButton.IsChecked = true;
+                    break;
+                case LLMProvider.OpenRouter:
+                    _openRouterRadioButton.IsChecked = true;
+                    break;
+                case LLMProvider.Cohere:
+                    _cohereRadioButton.IsChecked = true;
+                    break;
+            }
+        }
 
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        private void UpdateModelsList()
+        {
+            if (_modelComboBox == null) return;
 
-            var titleBlock = new TextBlock
+            _modelComboBox.Items.Clear();
+
+            // Add models based on selected provider
+            string[] models = LLMClientFactory.GetAvailableModels(_currentProvider);
+            foreach (var model in models)
             {
-                Text = title,
-                FontWeight = FontWeight.Bold,
-                Foreground = new SolidColorBrush(Color.Parse("#888888")),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 10, 0),
-                FontSize = 12
-            };
+                _modelComboBox.Items.Add(model);
+            }
 
-            var line = new Separator
+            // Set default model
+            string defaultModel = LLMClientFactory.GetDefaultModel(_currentProvider);
+            if (string.IsNullOrEmpty(_currentModel) || !_modelComboBox.Items.Contains(_currentModel))
             {
-                VerticalAlignment = VerticalAlignment.Center,
-                Height = 1,
-                Margin = new Thickness(5, 0, 0, 0)
-            };
+                _currentModel = defaultModel;
+            }
 
-            Grid.SetColumn(titleBlock, 0);
-            Grid.SetColumn(line, 1);
-
-            grid.Children.Add(titleBlock);
-            grid.Children.Add(line);
-
-            border.Child = grid;
-            return border;
+            if (_modelComboBox.Items.Contains(_currentModel))
+            {
+                _modelComboBox.SelectedItem = _currentModel;
+            }
+            else if (_modelComboBox.Items.Count > 0)
+            {
+                _modelComboBox.SelectedIndex = 0;
+                _currentModel = _modelComboBox.SelectedItem.ToString();
+            }
         }
 
         private async void RefreshModelsButton_Click(object? sender, RoutedEventArgs e)
@@ -526,43 +713,13 @@ namespace HoveringBallApp
 
                 try
                 {
-                    // Get available models
-                    string url = _ollamaUrlTextBox?.Text ?? "http://localhost:11434";
-                    var ollamaClient = new OllamaClient(url);
-                    var models = await ollamaClient.GetAvailableModels();
+                    await Task.Delay(500); // Simulate API request
 
-                    // Update the ComboBox
-                    if (_ollamaModelComboBox != null)
-                    {
-                        _ollamaModelComboBox.Items.Clear();
-                        foreach (var model in models)
-                        {
-                            _ollamaModelComboBox.Items.Add(model);
-                        }
-
-                        // If the list is empty, add default models
-                        if (models.Count == 0)
-                        {
-                            _ollamaModelComboBox.Items.Add("llama3");
-                            _ollamaModelComboBox.Items.Add("mistral");
-                            _ollamaModelComboBox.Items.Add("phi");
-                        }
-
-                        // Select the current model if it exists, otherwise select the first one
-                        if (_ollamaModelComboBox.Items.Contains(_ollamaModel))
-                        {
-                            _ollamaModelComboBox.SelectedItem = _ollamaModel;
-                        }
-                        else if (_ollamaModelComboBox.Items.Count > 0)
-                        {
-                            _ollamaModelComboBox.SelectedIndex = 0;
-                            _ollamaModel = _ollamaModelComboBox.SelectedItem?.ToString() ?? "";
-                        }
-                    }
+                    // For this example, we're just refreshing the standard models list
+                    UpdateModelsList();
                 }
                 catch (Exception ex)
                 {
-                    // Show error notification
                     await ShowErrorNotification($"Failed to get models: {ex.Message}");
                 }
                 finally
@@ -574,6 +731,45 @@ namespace HoveringBallApp
                         _loadingIndicator.IsVisible = false;
                 }
             }
+        }
+
+        private Border CreateSeparator(string title)
+        {
+            var border = new Border
+            {
+                Height = 35,
+                Margin = new Thickness(0, 5, 0, 5)
+            };
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var titleBlock = new TextBlock
+            {
+                Text = title,
+                FontWeight = FontWeight.Bold,
+                Foreground = new SolidColorBrush(Color.Parse("#888888")),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0),
+                FontSize = 12
+            };
+
+            var line = new Separator
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                Height = 1,
+                Margin = new Thickness(5, 0, 0, 0)
+            };
+
+            Grid.SetColumn(titleBlock, 0);
+            Grid.SetColumn(line, 1);
+
+            grid.Children.Add(titleBlock);
+            grid.Children.Add(line);
+
+            border.Child = grid;
+            return border;
         }
 
         private async Task ShowErrorNotification(string message)
@@ -657,23 +853,29 @@ namespace HoveringBallApp
             if (_groqApiKeyTextBox != null)
                 _groqApiKey = _groqApiKeyTextBox.Text;
 
-            if (_ollamaUrlTextBox != null)
-                _ollamaUrl = _ollamaUrlTextBox.Text;
+            if (_glhfApiKeyTextBox != null)
+                _glhfApiKey = _glhfApiKeyTextBox.Text;
 
-            if (_ollamaModelComboBox?.SelectedItem != null)
-                _ollamaModel = _ollamaModelComboBox.SelectedItem.ToString() ?? "llama3";
+            if (_openRouterApiKeyTextBox != null)
+                _openRouterApiKey = _openRouterApiKeyTextBox.Text;
 
-            if (_searxngUrlTextBox != null)
-                _searxngUrl = _searxngUrlTextBox.Text;
+            if (_cohereApiKeyTextBox != null)
+                _cohereApiKey = _cohereApiKeyTextBox.Text;
 
-            if (_webSearchEnabledCheckBox != null)
-                _webSearchEnabled = _webSearchEnabledCheckBox.IsChecked == true;
+            // Update config values
+            _config.UpdateApiKey("groq", _groqApiKey);
+            _config.UpdateApiKey("glhf", _glhfApiKey);
+            _config.UpdateApiKey("openrouter", _openRouterApiKey);
+            _config.UpdateApiKey("cohere", _cohereApiKey);
 
-            // Set API mode
-            if (_groqRadioButton?.IsChecked == true)
-                _currentApiMode = MainWindow.ApiMode.Groq;
-            else if (_ollamaRadioButton?.IsChecked == true)
-                _currentApiMode = MainWindow.ApiMode.Ollama;
+            // Update memory settings
+            if (_useMemorySystemCheckBox != null)
+                _useMemorySystem = _useMemorySystemCheckBox.IsChecked == true;
+
+            _config.UseMemorySystem = _useMemorySystem;
+
+            // Save configuration
+            _config.SaveConfiguration();
 
             // Add subtle save animation
             var saveButton = sender as Button;
@@ -694,13 +896,18 @@ namespace HoveringBallApp
                 timer.Start();
             }
 
-            // Notify that settings have changed
-            NotifySettingsChanged();
+            // Notify that settings have changed (include memory settings change flag)
+            NotifySettingsChanged(true);
         }
 
-        private void NotifySettingsChanged()
+        private void NotifySettingsChanged(bool memorySettingsChanged = false)
         {
-            SettingsChanged?.Invoke(this, EventArgs.Empty);
+            SettingsChanged?.Invoke(this, new SettingsChangedEventArgs
+            {
+                Provider = _currentProvider,
+                Model = _currentModel,
+                MemorySettingsChanged = memorySettingsChanged
+            });
         }
     }
 }

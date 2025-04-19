@@ -14,6 +14,8 @@ using System.Diagnostics;
 using System.Net.Http;
 using Avalonia.Animation;
 using Avalonia.Styling;
+using HoveringBallApp.Memory;
+using HoveringBallApp.LLM;
 
 namespace HoveringBallApp
 {
@@ -24,22 +26,18 @@ namespace HoveringBallApp
         private ResponseWindow _responseWindow;
         private SettingsWindow _settingsWindow;
 
-        // API clients
-        private GroqApiClient _groqApiClient;
-        private OllamaClient _ollamaClient;
-        private SearXNGClient _searxngClient;
+        // LLM Client Factory and current client
+        private LLMClientFactory _llmClientFactory;
+        private ILLMClient _currentLlmClient;
+        private LLMProvider _currentProvider = LLMProvider.Groq;
+        private string _currentModel = "llama3-70b-8192"; // Default Groq model
 
-        // Current API mode
-        private ApiMode _currentApiMode = ApiMode.Groq;
-        private string _currentModel = "llama3-8b-8192"; // Default Groq model
+        // Memory system
+        private IMemoryManager _memoryManager;
+        private Guid _sessionId = Guid.NewGuid();
 
-        // Settings
-        private string _groqApiKey = "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";
-        private string _ollamaUrl = "http://localhost:11434";
-        private string _ollamaModel = "llama3";
-        private string _fallbackOllamaModel = "deepseek-r1:1.5b"; // Fallback model
-        private string _searxngUrl = "http://localhost:8080";
-        private bool _webSearchEnabled = true;
+        // Configuration
+        private ConfigurationManager _config;
 
         // Animation related
         private DispatcherTimer _pulseTimer;
@@ -68,30 +66,28 @@ namespace HoveringBallApp
 
         public new event PropertyChangedEventHandler PropertyChanged;
 
-        // Define available API modes
-        public enum ApiMode
-        {
-            Groq,
-            Ollama
-        }
-
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
 
-            // Configure the window for transparency
+            // Configure the window for transparency with a fully rounded appearance
             TransparencyLevelHint = new WindowTransparencyLevel[] { WindowTransparencyLevel.Transparent };
             Background = Brushes.Transparent;
+            this.CornerRadius = new CornerRadius(45); // Ensure perfect roundness
+            UseLayoutRounding = true; // Ensure crisp edges
 
-            // Initialize API clients
-            InitializeApiClients();
+            // Initialize configuration
+            _config = new ConfigurationManager();
 
-            // Start SearXNG server process
-            StartSearXNGServer();
+            // Initialize memory manager
+            InitializeMemorySystem();
 
-            // Start Ollama server process
-            StartOllamaServer();
+            // Initialize LLM client factory
+            _llmClientFactory = new LLMClientFactory(_memoryManager, _config);
+
+            // Set the current LLM client
+            _currentLlmClient = _llmClientFactory.CreateClient(_currentProvider);
 
             this.Loaded += MainWindow_Loaded;
             this.PositionChanged += MainWindow_PositionChanged;
@@ -115,67 +111,12 @@ namespace HoveringBallApp
             _hoverTimer.Tick += HoverTimer_Tick;
         }
 
-        private void InitializeApiClients()
+        private void InitializeMemorySystem()
         {
-            _groqApiClient = new GroqApiClient(_groqApiKey);
-            _ollamaClient = new OllamaClient(_ollamaUrl);
-            _searxngClient = new SearXNGClient(_searxngUrl);
+            // Use only in-memory storage to avoid database connection issues
+            _memoryManager = new MemoryOnlyManager();
+            Console.WriteLine("Using in-memory storage exclusively (no database connections)");
         }
-
-        private void StartSearXNGServer()
-        {
-            try
-            {
-                // For Windows: Check if SearXNG is installed and start it
-                if (OperatingSystem.IsWindows())
-                {
-                    // This is just a placeholder - in a real implementation, you'd use
-                    // Process.Start() to launch SearXNG or check if it's running
-                    Console.WriteLine("SearXNG server would be started on Windows...");
-                }
-                // For Linux: Check if SearXNG is running, if not try to start with systemd or docker
-                else if (OperatingSystem.IsLinux())
-                {
-                    Console.WriteLine("SearXNG server would be started on Linux...");
-                }
-                // For macOS
-                else if (OperatingSystem.IsMacOS())
-                {
-                    Console.WriteLine("SearXNG server would be started on macOS...");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to start SearXNG: {ex.Message}");
-            }
-        }
-
-        private void StartOllamaServer()
-        {
-            try
-            {
-                // For Windows: Check if Ollama is installed and start it
-                if (OperatingSystem.IsWindows())
-                {
-                    Console.WriteLine("Ollama server would be started on Windows...");
-                }
-                // For Linux: Check if Ollama is running, if not try to start with systemd or docker
-                else if (OperatingSystem.IsLinux())
-                {
-                    Console.WriteLine("Ollama server would be started on Linux...");
-                }
-                // For macOS
-                else if (OperatingSystem.IsMacOS())
-                {
-                    Console.WriteLine("Ollama server would be started on macOS...");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to start Ollama: {ex.Message}");
-            }
-        }
-
         private void ThemeManager_ThemeChanged(object sender, AppTheme theme)
         {
             ApplyTheme(theme);
@@ -196,7 +137,7 @@ namespace HoveringBallApp
                 // Remove all theme classes first
                 _ballEllipse.Classes.Remove("Light");
                 _ballEllipse.Classes.Remove("Dark");
-                _ballEllipse.Classes.Remove("Brown");
+                _ballEllipse.Classes.Remove("System");
 
                 // Add appropriate theme class
                 switch (theme)
@@ -207,8 +148,9 @@ namespace HoveringBallApp
                     case AppTheme.Dark:
                         _ballEllipse.Classes.Add("Dark");
                         break;
-                    case AppTheme.Brown:
-                        _ballEllipse.Classes.Add("Brown");
+                    case AppTheme.System:
+                        bool isDarkMode = ThemeManager.Instance.IsSystemInDarkMode();
+                        _ballEllipse.Classes.Add(isDarkMode ? "Dark" : "Light");
                         break;
                 }
 
@@ -251,8 +193,9 @@ namespace HoveringBallApp
                         case AppTheme.Dark:
                             _themeToggle.Fill = new SolidColorBrush(Color.Parse("#AAAAAA"));
                             break;
-                        case AppTheme.Brown:
-                            _themeToggle.Fill = new SolidColorBrush(Color.Parse("#F5DEB3"));
+                        case AppTheme.System:
+                            bool isDarkMode = ThemeManager.Instance.IsSystemInDarkMode();
+                            _themeToggle.Fill = new SolidColorBrush(isDarkMode ? Color.Parse("#AAAAAA") : Color.Parse("#333333"));
                             break;
                     }
                 }
@@ -265,6 +208,14 @@ namespace HoveringBallApp
             UpdatePopupPositions();
         }
 
+        // Reference to UI elements for fluid animations
+        private Ellipse _glossHighlight;
+        private Ellipse _rimHighlight;
+        private Ellipse _spotHighlight;
+        private Ellipse _ambientGlow;
+        private Ellipse _outerGlow;
+        private Ellipse _innerCircle;
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // Get references to UI elements
@@ -273,6 +224,17 @@ namespace HoveringBallApp
             {
                 _ballEllipse = _ballButton.FindControl<Ellipse>("Ball");
                 _themeToggle = _ballButton.FindControl<Ellipse>("ThemeToggle");
+                
+                // Get references to fluid animation elements
+                _glossHighlight = _ballButton.FindControl<Ellipse>("GlossHighlight");
+                _rimHighlight = _ballButton.FindControl<Ellipse>("RimHighlight");
+                _spotHighlight = _ballButton.FindControl<Ellipse>("SpotHighlight");
+                _ambientGlow = _ballButton.FindControl<Ellipse>("AmbientGlow");
+                _outerGlow = _ballButton.FindControl<Ellipse>("OuterGlow");
+                _innerCircle = _ballButton.FindControl<Ellipse>("InnerCircle");
+
+                // Start ambient glow animation
+                StartAmbientAnimation();
 
                 // Add theme switching on theme toggle click
                 if (_themeToggle != null)
@@ -280,19 +242,186 @@ namespace HoveringBallApp
                     _themeToggle.PointerPressed += ThemeToggle_PointerPressed;
                     _themeToggle.PointerEntered += (s, args) =>
                     {
-                        _themeToggle.Opacity = 0.8;
+                        _themeToggle.Opacity = 0.9;
+                        AnimationHelper.AnimateScale(_themeToggle, 1.0, 1.2, TimeSpan.FromMilliseconds(200));
                     };
                     _themeToggle.PointerExited += (s, args) =>
                     {
                         _themeToggle.Opacity = 1.0;
+                        AnimationHelper.AnimateScale(_themeToggle, 1.2, 1.0, TimeSpan.FromMilliseconds(150));
                     };
                 }
 
-                // Add hover effects
+                // Add enhanced hover effects
                 _ballButton.PointerEntered += (s, args) =>
                 {
                     _isHovering = true;
                     _hoverTimer.Start();
+                    
+                    // Enhanced 3D hover effect - create a more dramatic light source effect
+                    if (_rimHighlight != null)
+                    {
+                        _rimHighlight.Opacity = 0.9;
+                        _rimHighlight.StrokeThickness = 2.5;
+                        
+                        // Add smooth scale animation for rim
+                        if (_rimHighlight.RenderTransform is ScaleTransform rimScale)
+                        {
+                            AnimationHelper.AnimateScale(rimScale, rimScale.ScaleX, 1.03, TimeSpan.FromMilliseconds(350));
+                        }
+                    }
+                    
+                    // Move the spot highlight to create depth illusion
+                    if (_spotHighlight != null)
+                    {
+                        // Create position animation via transform for more realistic light movement
+                        if (_spotHighlight.RenderTransform is TransformGroup spotTransforms)
+                        {
+                            foreach (var transform in spotTransforms.Children)
+                            {
+                                if (transform is TranslateTransform translateTransform)
+                                {
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.XProperty,
+                                        from: translateTransform.X,
+                                        to: -8,
+                                        duration: TimeSpan.FromMilliseconds(300),
+                                        easing: new Avalonia.Animation.Easings.CircularEaseOut()
+                                    );
+                                    
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.YProperty,
+                                        from: translateTransform.Y,
+                                        to: -10,
+                                        duration: TimeSpan.FromMilliseconds(300),
+                                        easing: new Avalonia.Animation.Easings.CircularEaseOut()
+                                    );
+                                }
+                                else if (transform is ScaleTransform scaleTransform)
+                                {
+                                    AnimationHelper.AnimateScale(scaleTransform, scaleTransform.ScaleX, 1.2, TimeSpan.FromMilliseconds(350));
+                                }
+                            }
+                        }
+                        
+                        // Enhance the spot glow
+                        _spotHighlight.Width = 30;
+                        _spotHighlight.Height = 30;
+                        _spotHighlight.Opacity = 0.8;
+                        
+                        // Add blur effect animation to increase glow
+                        if (_spotHighlight.Effect is BlurEffect spotBlur)
+                        {
+                            AnimationHelper.AnimateDouble(
+                                obj: spotBlur,
+                                property: BlurEffect.RadiusProperty,
+                                from: spotBlur.Radius,
+                                to: 3.5,
+                                duration: TimeSpan.FromMilliseconds(300)
+                            );
+                        }
+                    }
+                    
+                    // Move glossy highlight for enhanced 3D lighting effect
+                    if (_glossHighlight != null)
+                    {
+                        if (_glossHighlight.RenderTransform is TranslateTransform glossTranslate)
+                        {
+                            AnimationHelper.AnimateDouble(
+                                obj: glossTranslate,
+                                property: TranslateTransform.XProperty,
+                                from: glossTranslate.X,
+                                to: -6,
+                                duration: TimeSpan.FromMilliseconds(350)
+                            );
+                            
+                            AnimationHelper.AnimateDouble(
+                                obj: glossTranslate,
+                                property: TranslateTransform.YProperty,
+                                from: glossTranslate.Y,
+                                to: -12,
+                                duration: TimeSpan.FromMilliseconds(350)
+                            );
+                        }
+                        
+                        // Increase the glossy highlight opacity
+                        AnimationHelper.AnimateDouble(
+                            obj: _glossHighlight,
+                            property: OpacityProperty,
+                            from: _glossHighlight.Opacity,
+                            to: 0.9,
+                            duration: TimeSpan.FromMilliseconds(350)
+                        );
+                    }
+                    
+                    // Enhance inner circle depth effect
+                    if (_innerCircle != null)
+                    {
+                        if (_innerCircle.RenderTransform is TransformGroup innerTransforms)
+                        {
+                            foreach (var transform in innerTransforms.Children)
+                            {
+                                if (transform is TranslateTransform translateTransform)
+                                {
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.XProperty,
+                                        from: translateTransform.X,
+                                        to: 6,
+                                        duration: TimeSpan.FromMilliseconds(400)
+                                    );
+                                    
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.YProperty,
+                                        from: translateTransform.Y,
+                                        to: 4,
+                                        duration: TimeSpan.FromMilliseconds(400)
+                                    );
+                                }
+                                else if (transform is ScaleTransform scaleTransform)
+                                {
+                                    AnimationHelper.AnimateScale(scaleTransform, scaleTransform.ScaleX, 1.15, TimeSpan.FromMilliseconds(400));
+                                }
+                            }
+                        }
+                        
+                        // Increase inner glow opacity
+                        AnimationHelper.AnimateDouble(
+                            obj: _innerCircle,
+                            property: OpacityProperty,
+                            from: _innerCircle.Opacity,
+                            to: 0.45,
+                            duration: TimeSpan.FromMilliseconds(300)
+                        );
+                    }
+                    
+                    // Enhance the ambient and outer glows
+                    if (_ambientGlow != null && _ambientGlow.RenderTransform is ScaleTransform ambientScale)
+                    {
+                        AnimationHelper.AnimateScale(ambientScale, ambientScale.ScaleX, 1.08, TimeSpan.FromMilliseconds(450));
+                        AnimationHelper.AnimateDouble(
+                            obj: _ambientGlow,
+                            property: OpacityProperty,
+                            from: _ambientGlow.Opacity,
+                            to: _ambientGlow.Opacity * 1.4,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                    }
+                    
+                    if (_outerGlow != null && _outerGlow.RenderTransform is ScaleTransform outerScale)
+                    {
+                        AnimationHelper.AnimateScale(outerScale, outerScale.ScaleX, 1.1, TimeSpan.FromMilliseconds(500));
+                        AnimationHelper.AnimateDouble(
+                            obj: _outerGlow,
+                            property: OpacityProperty,
+                            from: _outerGlow.Opacity,
+                            to: _outerGlow.Opacity * 1.5,
+                            duration: TimeSpan.FromMilliseconds(500)
+                        );
+                    }
                 };
 
                 _ballButton.PointerExited += (s, args) =>
@@ -300,28 +429,215 @@ namespace HoveringBallApp
                     _isHovering = false;
                     _hoverTimer.Stop();
 
-                    // Reset any hover effects if we were hovering
+                    // Reset hover effects with smooth animations for main ball drop shadow
                     if (_ballEllipse != null && _ballEllipse.Effect is DropShadowEffect hoverEffect)
                     {
-                        var fadeAnimation = new Animation
+                        AnimationHelper.AnimateDouble(
+                            obj: hoverEffect,
+                            property: DropShadowEffect.BlurRadiusProperty,
+                            from: hoverEffect.BlurRadius,
+                            to: 10.0,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                        
+                        AnimationHelper.AnimateDouble(
+                            obj: hoverEffect,
+                            property: DropShadowEffect.OpacityProperty,
+                            from: hoverEffect.Opacity,
+                            to: 0.2,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                    }
+                    
+                    // Smoothly reset rim highlight
+                    if (_rimHighlight != null)
+                    {
+                        AnimationHelper.AnimateDouble(
+                            obj: _rimHighlight,
+                            property: OpacityProperty,
+                            from: _rimHighlight.Opacity,
+                            to: 0.4,
+                            duration: TimeSpan.FromMilliseconds(400)
+                        );
+                        
+                        AnimationHelper.AnimateDouble(
+                            obj: _rimHighlight,
+                            property: Avalonia.Controls.Shapes.Ellipse.StrokeThicknessProperty,
+                            from: _rimHighlight.StrokeThickness,
+                            to: 1.5,
+                            duration: TimeSpan.FromMilliseconds(400)
+                        );
+                        
+                        if (_rimHighlight.RenderTransform is ScaleTransform rimScale)
                         {
-                            Duration = TimeSpan.FromMilliseconds(200),
-                            FillMode = FillMode.Forward
-                        };
-
-                        fadeAnimation.Children.Add(new KeyFrame
+                            AnimationHelper.AnimateScale(rimScale, rimScale.ScaleX, 1.0, TimeSpan.FromMilliseconds(400));
+                        }
+                    }
+                    
+                    // Reset spot highlight with fluid animation
+                    if (_spotHighlight != null)
+                    {
+                        AnimationHelper.AnimateDouble(
+                            obj: _spotHighlight,
+                            property: WidthProperty,
+                            from: _spotHighlight.Width,
+                            to: 25,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                        
+                        AnimationHelper.AnimateDouble(
+                            obj: _spotHighlight,
+                            property: HeightProperty,
+                            from: _spotHighlight.Height,
+                            to: 25,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                        
+                        AnimationHelper.AnimateDouble(
+                            obj: _spotHighlight,
+                            property: OpacityProperty,
+                            from: _spotHighlight.Opacity,
+                            to: 0.5,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                        
+                        if (_spotHighlight.RenderTransform is TransformGroup spotTransforms)
                         {
-                            Cue = new Cue(0.0),
-                            Setters = { new Setter(DropShadowEffect.BlurRadiusProperty, hoverEffect.BlurRadius) }
-                        });
-
-                        fadeAnimation.Children.Add(new KeyFrame
+                            foreach (var transform in spotTransforms.Children)
+                            {
+                                if (transform is TranslateTransform translateTransform)
+                                {
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.XProperty,
+                                        from: translateTransform.X,
+                                        to: 0,
+                                        duration: TimeSpan.FromMilliseconds(450)
+                                    );
+                                    
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.YProperty,
+                                        from: translateTransform.Y,
+                                        to: 0,
+                                        duration: TimeSpan.FromMilliseconds(450)
+                                    );
+                                }
+                                else if (transform is ScaleTransform scaleTransform)
+                                {
+                                    AnimationHelper.AnimateScale(scaleTransform, scaleTransform.ScaleX, 1.0, TimeSpan.FromMilliseconds(450));
+                                }
+                            }
+                        }
+                        
+                        // Reset blur effect
+                        if (_spotHighlight.Effect is BlurEffect spotBlur)
                         {
-                            Cue = new Cue(1.0),
-                            Setters = { new Setter(DropShadowEffect.BlurRadiusProperty, 10.0) }
-                        });
-
-                        fadeAnimation.RunAsync((Animatable)_ballEllipse.Effect);
+                            AnimationHelper.AnimateDouble(
+                                obj: spotBlur,
+                                property: BlurEffect.RadiusProperty,
+                                from: spotBlur.Radius,
+                                to: 2.0,
+                                duration: TimeSpan.FromMilliseconds(450)
+                            );
+                        }
+                    }
+                    
+                    // Reset glossy highlight with smooth animation
+                    if (_glossHighlight != null)
+                    {
+                        if (_glossHighlight.RenderTransform is TranslateTransform glossTranslate)
+                        {
+                            AnimationHelper.AnimateDouble(
+                                obj: glossTranslate,
+                                property: TranslateTransform.XProperty,
+                                from: glossTranslate.X,
+                                to: 0,
+                                duration: TimeSpan.FromMilliseconds(450)
+                            );
+                            
+                            AnimationHelper.AnimateDouble(
+                                obj: glossTranslate,
+                                property: TranslateTransform.YProperty,
+                                from: glossTranslate.Y,
+                                to: 0,
+                                duration: TimeSpan.FromMilliseconds(450)
+                            );
+                        }
+                        
+                        AnimationHelper.AnimateDouble(
+                            obj: _glossHighlight,
+                            property: OpacityProperty,
+                            from: _glossHighlight.Opacity,
+                            to: 0.6,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                    }
+                    
+                    // Reset inner circle with smooth animation
+                    if (_innerCircle != null)
+                    {
+                        AnimationHelper.AnimateDouble(
+                            obj: _innerCircle,
+                            property: OpacityProperty,
+                            from: _innerCircle.Opacity,
+                            to: 0.25,
+                            duration: TimeSpan.FromMilliseconds(450)
+                        );
+                        
+                        if (_innerCircle.RenderTransform is TransformGroup innerTransforms)
+                        {
+                            foreach (var transform in innerTransforms.Children)
+                            {
+                                if (transform is TranslateTransform translateTransform)
+                                {
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.XProperty,
+                                        from: translateTransform.X,
+                                        to: 0,
+                                        duration: TimeSpan.FromMilliseconds(450)
+                                    );
+                                    
+                                    AnimationHelper.AnimateDouble(
+                                        obj: translateTransform,
+                                        property: TranslateTransform.YProperty,
+                                        from: translateTransform.Y,
+                                        to: 0,
+                                        duration: TimeSpan.FromMilliseconds(450)
+                                    );
+                                }
+                                else if (transform is ScaleTransform scaleTransform)
+                                {
+                                    AnimationHelper.AnimateScale(scaleTransform, scaleTransform.ScaleX, 1.0, TimeSpan.FromMilliseconds(450));
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Reset ambient and outer glows
+                    if (_ambientGlow != null && _ambientGlow.RenderTransform is ScaleTransform ambientScale)
+                    {
+                        AnimationHelper.AnimateScale(ambientScale, ambientScale.ScaleX, 1.0, TimeSpan.FromMilliseconds(500));
+                        AnimationHelper.AnimateDouble(
+                            obj: _ambientGlow,
+                            property: OpacityProperty,
+                            from: _ambientGlow.Opacity,
+                            to: 0.25,
+                            duration: TimeSpan.FromMilliseconds(500)
+                        );
+                    }
+                    
+                    if (_outerGlow != null && _outerGlow.RenderTransform is ScaleTransform outerScale)
+                    {
+                        AnimationHelper.AnimateScale(outerScale, outerScale.ScaleX, 1.0, TimeSpan.FromMilliseconds(550));
+                        AnimationHelper.AnimateDouble(
+                            obj: _outerGlow,
+                            property: OpacityProperty,
+                            from: _outerGlow.Opacity,
+                            to: 0.15,
+                            duration: TimeSpan.FromMilliseconds(550)
+                        );
                     }
                 };
             }
@@ -333,7 +649,7 @@ namespace HoveringBallApp
 
             _responseWindow = new ResponseWindow();
 
-            _settingsWindow = new SettingsWindow();
+            _settingsWindow = new SettingsWindow(_config);
             _settingsWindow.SettingsChanged += SettingsWindow_SettingsChanged;
 
             // Apply initial animation
@@ -356,7 +672,6 @@ namespace HoveringBallApp
             Console.WriteLine("MainWindow loaded successfully");
         }
 
-
         private void ThemeToggle_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
             // Toggle theme
@@ -371,19 +686,146 @@ namespace HoveringBallApp
             e.Handled = true;
         }
 
+        private void StartAmbientAnimation()
+        {
+            // Create enhanced fluid ambient animations for the ball
+            if (_ambientGlow != null && _outerGlow != null)
+            {
+                var ambientTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps for smoother motion
+                double time = 0;
+                ambientTimer.Tick += (s, e) =>
+                {
+                    time += 0.016;
+                    
+                    // Create complex motion with multiple sine waves for more organic, fluid 3D feel
+                    double primaryPulse = Math.Sin(time) * 0.5 + 0.5; // 0 to 1 oscillation
+                    double secondaryPulse = Math.Sin(time * 0.6) * 0.5 + 0.5; // Different frequency
+                    double tertiaryPulse = Math.Sin(time * 0.3) * 0.3 + 0.5; // Slower frequency
+                    double quaternaryPulse = Math.Sin(time * 0.15) * 0.7 + 0.3; // Very slow undulation
+                    
+                    // Add scale transform animations for inner elements
+                    if (_ambientGlow.RenderTransform is ScaleTransform ambientScaleTransform)
+                    {
+                        ambientScaleTransform.ScaleX = 1.0 + primaryPulse * 0.1;
+                        ambientScaleTransform.ScaleY = 1.0 + primaryPulse * 0.1;
+                    }
+                    
+                    if (_outerGlow.RenderTransform is ScaleTransform outerScaleTransform)
+                    {
+                        outerScaleTransform.ScaleX = 1.0 + secondaryPulse * 0.15;
+                        outerScaleTransform.ScaleY = 1.0 + secondaryPulse * 0.15;
+                    }
+                    
+                    // Smoothly vary the opacity of the ambient glows for depth effect
+                    _ambientGlow.Opacity = 0.15 + primaryPulse * 0.2;
+                    _outerGlow.Opacity = 0.12 + secondaryPulse * 0.1;
+                    
+                    // Add 3D parallax movement to inner circle for enhanced depth feel
+                    if (_innerCircle != null && !_isHovering)
+                    {
+                        // More complex motion by combining multiple frequencies
+                        double moveX = (Math.Sin(time * 0.7) * 3.0) + (Math.Sin(time * 0.4) * 1.5);
+                        double moveY = (Math.Cos(time * 0.5) * 2.5) + (Math.Cos(time * 0.3) * 1.2);
+                        
+                        // Access the TransformGroup for more complex movement
+                        if (_innerCircle.RenderTransform is TransformGroup innerTransformGroup)
+                        {
+                            // Find the TranslateTransform within the group
+                            foreach (var transform in innerTransformGroup.Children)
+                            {
+                                if (transform is TranslateTransform translateTransform)
+                                {
+                                    translateTransform.X = moveX;
+                                    translateTransform.Y = moveY;
+                                }
+                                else if (transform is ScaleTransform scaleTransform)
+                                {
+                                    // Add slight pulsing to make it seem more alive
+                                    scaleTransform.ScaleX = 1.0 + quaternaryPulse * 0.12;
+                                    scaleTransform.ScaleY = 1.0 + quaternaryPulse * 0.12;
+                                }
+                            }
+                        }
+                        
+                        _innerCircle.Opacity = 0.25 + tertiaryPulse * 0.15;
+                    }
+                    
+                    // Enhance spot highlight movement with 3D-like parallax
+                    if (_spotHighlight != null && !_isHovering)
+                    {
+                        // Create organic movement that feels slightly independent
+                        double moveX = (Math.Sin(time * 0.5) * 3.5) + (Math.Sin(time * 0.3) * 1.2);
+                        double moveY = (Math.Cos(time * 0.4) * 2.8) + (Math.Cos(time * 0.25) * 1.5);
+                        
+                        // Update transform properties for fluid motion
+                        if (_spotHighlight.RenderTransform is TransformGroup spotTransformGroup)
+                        {
+                            foreach (var transform in spotTransformGroup.Children)
+                            {
+                                if (transform is TranslateTransform translateTransform)
+                                {
+                                    translateTransform.X = moveX;
+                                    translateTransform.Y = moveY;
+                                }
+                                else if (transform is ScaleTransform scaleTransform)
+                                {
+                                    // Very subtle scale oscillation
+                                    scaleTransform.ScaleX = 1.0 + quaternaryPulse * 0.08;
+                                    scaleTransform.ScaleY = 1.0 + quaternaryPulse * 0.08;
+                                }
+                            }
+                        }
+                        
+                        _spotHighlight.Opacity = 0.4 + tertiaryPulse * 0.25;
+                    }
+                    
+                    // Add enhanced 3D-like movement to glossy highlight
+                    if (_glossHighlight != null && !_isHovering)
+                    {
+                        // Create slow, fluid movement that follows the light source
+                        double moveX = Math.Sin(time * 0.2) * 2.2;
+                        double moveY = Math.Sin(time * 0.15) * 1.8;
+                        
+                        // Update transform for parallax effect
+                        if (_glossHighlight.RenderTransform is TranslateTransform glossTranslate)
+                        {
+                            glossTranslate.X = moveX;
+                            glossTranslate.Y = moveY - 1.0; // Offset to maintain highlight position
+                        }
+                    }
+                    
+                    // Enhance rim highlight for 3D appearance
+                    if (_rimHighlight != null && !_isHovering)
+                    {
+                        // Create scale breathing effect for the rim
+                        if (_rimHighlight.RenderTransform is ScaleTransform rimScale)
+                        {
+                            rimScale.ScaleX = 1.0 + quaternaryPulse * 0.02; // Very subtle scale
+                            rimScale.ScaleY = 1.0 + quaternaryPulse * 0.02;
+                        }
+                        
+                        _rimHighlight.Opacity = 0.35 + tertiaryPulse * 0.15;
+                    }
+                };
+                ambientTimer.Start();
+            }
+        }
+        
         private void HoverTimer_Tick(object sender, EventArgs e)
         {
             if (_isHovering && _ballEllipse != null)
             {
                 _hoverTimer.Stop();
 
-                // Create a glow effect by adjusting the DropShadow properties directly
+                // Enhanced glow effect with smoother animation
                 if (_ballEllipse.Effect is DropShadowEffect effect)
                 {
-                    // Animate the blur radius
-                    int steps = 15;
+                    // Animate the drop shadow with more subtle, fluid effect
+                    int steps = 20; // More steps for smoother animation
                     double startBlur = effect.BlurRadius;
-                    double endBlur = 15.0;
+                    double startOpacity = effect.Opacity;
+                    double endBlur = 18.0;
+                    double endOpacity = 0.4;
                     int currentStep = 0;
 
                     var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
@@ -393,6 +835,7 @@ namespace HoveringBallApp
                         if (currentStep > steps)
                         {
                             effect.BlurRadius = endBlur;
+                            effect.Opacity = endOpacity;
                             timer.Stop();
                             return;
                         }
@@ -400,6 +843,7 @@ namespace HoveringBallApp
                         double progress = (double)currentStep / steps;
                         double easedProgress = AnimationHelper.EaseOutCubic(progress);
                         effect.BlurRadius = startBlur + (endBlur - startBlur) * easedProgress;
+                        effect.Opacity = startOpacity + (endOpacity - startOpacity) * easedProgress;
                     };
 
                     timer.Start();
@@ -409,8 +853,8 @@ namespace HoveringBallApp
                     // Create effect if it doesn't exist
                     var shadowEffect = new DropShadowEffect
                     {
-                        BlurRadius = 15,
-                        Opacity = 0.3,
+                        BlurRadius = 18,
+                        Opacity = 0.4,
                         OffsetX = 0,
                         OffsetY = 0
                     };
@@ -418,6 +862,7 @@ namespace HoveringBallApp
                 }
             }
         }
+
         private void InitializeContextMenuEvents()
         {
             // Find the context menu items
@@ -452,7 +897,6 @@ namespace HoveringBallApp
                 _settingsWindow.Hide();
             }
         }
-
 
         private void MinimizeToTray()
         {
@@ -508,6 +952,7 @@ namespace HoveringBallApp
 
             timer.Start();
         }
+
         private void CloseApplication()
         {
             // Animate closing
@@ -535,15 +980,20 @@ namespace HoveringBallApp
         // New API selection changed handler
         private void InputWindow_ApiSelectionChanged(object sender, ApiSelectionChangedEventArgs e)
         {
-            if (e.ApiName == "Groq")
+            if (Enum.TryParse<LLMProvider>(e.ApiName, out var provider))
             {
-                _currentApiMode = ApiMode.Groq;
-                _currentModel = e.ModelName ?? "llama3-8b-8192";
+                _currentProvider = provider;
+                _currentModel = e.ModelName ?? LLMClientFactory.GetDefaultModel(provider);
+
+                // Update the current LLM client
+                _currentLlmClient = _llmClientFactory.CreateClient(provider);
             }
-            else if (e.ApiName == "Ollama")
+            else
             {
-                _currentApiMode = ApiMode.Ollama;
-                _currentModel = e.ModelName ?? _ollamaModel;
+                // Fallback to Groq if the provider is not recognized
+                _currentProvider = LLMProvider.Groq;
+                _currentModel = LLMClientFactory.GetDefaultModel(LLMProvider.Groq);
+                _currentLlmClient = _llmClientFactory.CreateClient(LLMProvider.Groq);
             }
         }
 
@@ -560,6 +1010,7 @@ namespace HoveringBallApp
             // Animate from 0 to 1 with a slight bounce
             AnimationHelper.AnimateBounce(ballButton, 0.0, 1.0, 0.15, TimeSpan.FromMilliseconds(800));
         }
+
         // Ball click handler
         public void Ball_Clicked(object sender, RoutedEventArgs e)
         {
@@ -604,7 +1055,7 @@ namespace HoveringBallApp
 
                 // Set the current API mode and model in the input window
                 _inputWindow.SetApiSelection(
-                    _currentApiMode == ApiMode.Groq ? "Groq" : "Ollama",
+                    _currentProvider.ToString(),
                     _currentModel
                 );
 
@@ -618,46 +1069,36 @@ namespace HoveringBallApp
 
             e.Handled = true;
         }
-        
+
         private async void InputWindow_TextSubmitted(object sender, string text)
         {
-            await SendToApi(text);
+            await SendToLLM(text);
         }
 
-        private void SettingsWindow_SettingsChanged(object sender, EventArgs e)
+        private void SettingsWindow_SettingsChanged(object sender, SettingsChangedEventArgs e)
         {
-            // Update settings based on SettingsWindow changes
-            if (_settingsWindow.GroqApiKey != null)
+            // Update the current provider if it has changed
+            if (e.Provider != _currentProvider)
             {
-                _groqApiKey = _settingsWindow.GroqApiKey;
-                if (_currentApiMode == ApiMode.Groq)
-                {
-                    _groqApiClient = new GroqApiClient(_groqApiKey);
-                }
+                _currentProvider = e.Provider;
+                _currentLlmClient = _llmClientFactory.CreateClient(e.Provider);
             }
 
-            if (_settingsWindow.OllamaUrl != null)
+            // Update the current model if it has changed
+            if (e.Model != _currentModel)
             {
-                _ollamaUrl = _settingsWindow.OllamaUrl;
-                if (_currentApiMode == ApiMode.Ollama)
-                {
-                    _ollamaClient = new OllamaClient(_ollamaUrl);
-                }
+                _currentModel = e.Model;
             }
 
-            if (_settingsWindow.OllamaModel != null)
+            // Reinitialize memory system if memory settings have changed
+            if (e.MemorySettingsChanged)
             {
-                _ollamaModel = _settingsWindow.OllamaModel;
-            }
+                InitializeMemorySystem();
 
-            if (_settingsWindow.SearxngUrl != null)
-            {
-                _searxngUrl = _settingsWindow.SearxngUrl;
-                _searxngClient = new SearXNGClient(_searxngUrl);
+                // Re-create LLM client factory with new memory manager
+                _llmClientFactory = new LLMClientFactory(_memoryManager, _config);
+                _currentLlmClient = _llmClientFactory.CreateClient(_currentProvider);
             }
-
-            _webSearchEnabled = _settingsWindow.WebSearchEnabled;
-            _currentApiMode = _settingsWindow.CurrentApiMode;
         }
 
         private void UpdatePopupPositions()
@@ -726,7 +1167,7 @@ namespace HoveringBallApp
             e.Handled = true;
         }
 
-        private async Task SendToApi(string input)
+        private async Task SendToLLM(string input)
         {
             try
             {
@@ -740,38 +1181,25 @@ namespace HoveringBallApp
 
                 string response = string.Empty;
 
-                // Use the current API mode and model
                 try
                 {
-                    if (_currentApiMode == ApiMode.Groq)
-                    {
-                        // Get the currently selected model from the input window
-                        response = await _groqApiClient.SendMessage(input, _currentModel);
-                    }
-                    else
-                    {
-                        // Use Ollama with selected model
-                        response = await _ollamaClient.SendMessage(input, _currentModel);
-                    }
+                    // Send message to the current LLM client
+                    response = await _currentLlmClient.SendMessageAsync(input, _sessionId, _currentModel);
                 }
                 catch (HttpRequestException ex)
                 {
-                    // If there's a connection issue with Groq, fall back to Ollama
-                    if (_currentApiMode == ApiMode.Groq)
-                    {
-                        Console.WriteLine($"Groq API connection error: {ex.Message}. Falling back to Ollama.");
+                    // If there's a connection issue, try falling back to a different provider
+                    Console.WriteLine($"{_currentProvider} API connection error: {ex.Message}. Falling back to alternate provider.");
 
-                        // Set up a notification in the response
-                        response = $"**Note: Groq API connection failed. Falling back to local Ollama model.**\n\n";
+                    // Set up a notification in the response
+                    response = $"**Note: {_currentProvider} API connection failed. Falling back to alternate provider.**\n\n";
 
-                        // Use the fallback model
-                        response += await _ollamaClient.SendMessage(input, _fallbackOllamaModel);
-                    }
-                    else
-                    {
-                        // If Ollama was the primary choice and failed, rethrow
-                        throw;
-                    }
+                    // Try another provider as fallback
+                    var fallbackProvider = _currentProvider == LLMProvider.Groq ? LLMProvider.OpenRouter : LLMProvider.Groq;
+                    var fallbackClient = _llmClientFactory.CreateClient(fallbackProvider);
+                    var fallbackModel = LLMClientFactory.GetDefaultModel(fallbackProvider);
+
+                    response += await fallbackClient.SendMessageAsync(input, _sessionId, fallbackModel);
                 }
 
                 // Stop pulsing animation

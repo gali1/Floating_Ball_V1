@@ -116,9 +116,9 @@ namespace HoveringBallApp
                 _statusTimer.Stop();
             };
 
-            this.Width = 450;
-            this.MaxWidth = 800;
-            this.MinWidth = 300;
+            this.Width = 550; // Slightly wider default for better text display
+            this.MaxWidth = 1000; // Allow larger width for code and text
+            this.MinWidth = 350; // Slightly wider minimum for better readability
 
             // Handle resize events
             this.PropertyChanged += (sender, args) =>
@@ -133,6 +133,10 @@ namespace HoveringBallApp
 
         private void InitializeContent()
         {
+            // Load user preferences for word wrap (if this were implemented)
+            // For now we default to true
+            _isWordWrapEnabled = true;
+            
             // Create main layout grid
             var mainGrid = new Grid();
             mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -187,7 +191,9 @@ namespace HoveringBallApp
             // Create scrollable response area with enhanced styling
             _scrollViewer = new ScrollViewer
             {
-                HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = _isWordWrapEnabled ? 
+                    Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : 
+                    Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
                 VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
                 MaxHeight = 500,
                 MinHeight = 200,
@@ -197,7 +203,9 @@ namespace HoveringBallApp
             _contentPanel = new StackPanel
             {
                 Spacing = 10,
-                Margin = new Thickness(5)
+                Margin = new Thickness(5),
+                Width = double.NaN, // Use available width
+                HorizontalAlignment = HorizontalAlignment.Stretch // Stretch horizontally
             };
 
             _scrollViewer.Content = _contentPanel;
@@ -306,6 +314,25 @@ namespace HoveringBallApp
         private void WordWrapToggle_CheckedChanged(object sender, RoutedEventArgs e)
         {
             _isWordWrapEnabled = _wordWrapToggle.IsChecked == true;
+            
+            // Update scrollbar visibility based on word wrap setting
+            if (_scrollViewer != null)
+            {
+                _scrollViewer.HorizontalScrollBarVisibility = _isWordWrapEnabled ?
+                    Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled :
+                    Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+            }
+            
+            // Save the word wrap preference (in a real implementation,
+            // this would save to a config file - for now it's just in memory)
+            // Note: ConfigurationManager doesn't currently have a static Instance property
+            // so we'll just skip saving the preference for now
+            // if (ConfigurationManager.Instance != null)
+            // {
+            //    // If we had a setting for this in ConfigurationManager, we'd save it here
+            //    // ConfigurationManager.Instance.WordWrapEnabled = _isWordWrapEnabled;
+            // }
+            
             ProcessAndDisplayContent(_content); // Refresh content with new wrap setting
         }
 
@@ -423,17 +450,19 @@ namespace HoveringBallApp
                 TextWrapping = _isWordWrapEnabled ? TextWrapping.Wrap : TextWrapping.NoWrap,
                 Margin = new Thickness(5),
                 LineHeight = 1.5,
-                FontSize = 14
+                FontSize = 14,
+                HorizontalAlignment = HorizontalAlignment.Stretch, // Stretch to fill available width
+                Width = double.NaN // Use available width
             };
 
             // Process and apply the inline formatting
             string processedText = text;
+            
+            // Set up inlines list for rich text formatting if available
             var inlines = new List<Avalonia.Controls.Documents.Inline>();
 
-            // Find all formatting tags
-            var boldMatches = Regex.Matches(processedText, @"<Bold>(.*?)</Bold>");
-            var italicMatches = Regex.Matches(processedText, @"<Italic>(.*?)</Italic>");
-            var codeMatches = Regex.Matches(processedText, @"<Code>(.*?)</Code>");
+            // We'll use simple tag stripping for now, but this is where
+            // rich text with spans would be implemented in the future
 
             // Strip all formatting tags for plain text
             processedText = Regex.Replace(processedText, @"<Bold>(.*?)</Bold>", "$1");
@@ -441,6 +470,16 @@ namespace HoveringBallApp
             processedText = Regex.Replace(processedText, @"<Code>(.*?)</Code>", "$1");
 
             textBlock.Text = processedText;
+            
+            // Set maximum width for better readability on large screens
+            if (_isWordWrapEnabled)
+            {
+                textBlock.MaxWidth = 900; // Limit line length for better readability
+            }
+            else
+            {
+                textBlock.MaxWidth = double.PositiveInfinity;
+            }
 
             return textBlock;
         }
@@ -550,15 +589,30 @@ namespace HoveringBallApp
             {
                 Classes = { "CodeBlock" },
                 Padding = new Thickness(15),
-                Margin = new Thickness(0, 0, 0, 5)
+                Margin = new Thickness(0, 0, 0, 5),
+                HorizontalAlignment = HorizontalAlignment.Stretch, // Stretch to fill available width
+                Width = double.NaN, // Use available width
+                MaxWidth = _isWordWrapEnabled ? 900 : double.PositiveInfinity // Limit width for better readability
             };
 
+            // To better handle indentation in code, we process first and then set the text
+            // This ensures that leading spaces are preserved even with word wrap
+            
+            // For preserving indentation when wrapping, we could replace spaces 
+            // with non-breaking spaces, but that's not ideal. In a full implementation,
+            // we'd use a proper code editor control instead.
+            
             var codeText = new TextBlock
             {
                 Classes = { "CodeText" },
                 Text = code,
                 TextWrapping = _isWordWrapEnabled ? TextWrapping.Wrap : TextWrapping.NoWrap,
-                FontFamily = new FontFamily("Consolas, Menlo, Monaco, 'Courier New', monospace")
+                FontFamily = new FontFamily("Consolas, Menlo, Monaco, 'Courier New', monospace"),
+                HorizontalAlignment = HorizontalAlignment.Stretch, // Stretch to fill available width
+                Width = double.NaN, // Use available width
+                MaxWidth = _isWordWrapEnabled ? 900 : double.PositiveInfinity, // Limit width for readability
+                Margin = new Thickness(0),
+                LineHeight = 1.4 // Better line spacing for code
             };
 
             // Apply syntax highlighting based on language
@@ -806,7 +860,10 @@ namespace HoveringBallApp
             // Update content layout when window is resized
             if (_content != null)
             {
-                ProcessAndDisplayContent(_content);
+                // Small delay to avoid excessive refreshing during resize
+                DispatcherTimer.RunOnce(() => {
+                    ProcessAndDisplayContent(_content);
+                }, TimeSpan.FromMilliseconds(100));
             }
         }
     }

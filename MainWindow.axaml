@@ -1,122 +1,234 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="HoveringBallApp.MainWindow"
-        Title="Floating Ball Assistant"
-        Width="90" Height="90"
-        WindowStartupLocation="CenterScreen"
-        SystemDecorations="None"
-        Background="Transparent"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
-        ExtendClientAreaTitleBarHeightHint="-1">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="HoveringBallApp.MainWindow" Title="Floating Ball Assistant" Width="90" Height="90" WindowStartupLocation="CenterScreen" SystemDecorations="None" Background="Transparent" ExtendClientAreaToDecorationsHint="True" ExtendClientAreaChromeHints="NoChrome" ExtendClientAreaTitleBarHeightHint="-1" TransparencyLevelHint="Transparent" UseLayoutRounding="True" RenderOptions.BitmapInterpolationMode="HighQuality">
+    <Window.Styles>
+        <Style Selector="Window">
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </Window.Styles>
 
     <Grid>
-        <!-- Enhanced shadow effect with multiple layers for depth -->
-        <Ellipse Width="84" Height="84"
-                 HorizontalAlignment="Center"
-                 VerticalAlignment="Center"
-                 Margin="5,5,0,0">
-            <Ellipse.Fill>
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                    <GradientStop Offset="0" Color="#30000000"/>
-                    <GradientStop Offset="1" Color="#15000000"/>
-                </LinearGradientBrush>
-            </Ellipse.Fill>
-        </Ellipse>
+        <!-- Modern shadow effect with precise edges -->
+        <Rectangle Width="84" Height="84" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,4,0,0" RadiusX="4" RadiusY="4">
+            <Rectangle.Fill>
+                <SolidColorBrush Color="#20000000"/>
+            </Rectangle.Fill>
+            <Rectangle.Effect>
+                <BlurEffect Radius="4"/>
+            </Rectangle.Effect>
+        </Rectangle>
 
-        <!-- Secondary shadow for more depth -->
-        <Ellipse Width="82" Height="82"
-                 HorizontalAlignment="Center"
-                 VerticalAlignment="Center"
-                 Margin="3,3,0,0">
-            <Ellipse.Fill>
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                    <GradientStop Offset="0" Color="#25000000"/>
-                    <GradientStop Offset="1" Color="#10000000"/>
-                </LinearGradientBrush>
-            </Ellipse.Fill>
-        </Ellipse>
+        <!-- Secondary shadow for elevation effect -->
+        <Rectangle Width="82" Height="82" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,2,0,0" RadiusX="4" RadiusY="4">
+            <Rectangle.Fill>
+                <SolidColorBrush Color="#15000000"/>
+            </Rectangle.Fill>
+            <Rectangle.Effect>
+                <BlurEffect Radius="2"/>
+            </Rectangle.Effect>
+        </Rectangle>
 
-        <!-- Main Ball with Rich Texture -->
-        <Button Name="BallButton"
-                Background="Transparent"
-                BorderThickness="0"
-                Width="80" Height="80"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Click="Ball_Clicked">
+        <!-- Main Ball with Enhanced Fluid Texture -->
+        <Button Name="BallButton" Background="Transparent" BorderThickness="0" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Ball_Clicked">
             <Button.Template>
                 <ControlTemplate>
                     <Grid>
-                        <!-- Ball background with enhanced gradient -->
-                        <Ellipse Name="Ball"
-                                Classes="HoveringBall"
-                                Width="80" Height="80"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                            <Ellipse.Transitions>
+                        <!-- Main ball background with modern flat gradient -->
+                        <Rectangle Name="Ball" Classes="HoveringBall" Width="76" Height="76" HorizontalAlignment="Center" VerticalAlignment="Center" RadiusX="4" RadiusY="4">
+                            <Rectangle.Transitions>
                                 <Transitions>
-                                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
                                 </Transitions>
-                            </Ellipse.Transitions>
-                        </Ellipse>
+                            </Rectangle.Transitions>
+                        </Rectangle>
 
-                        <!-- Inner highlight for 3D effect with smoother gradient -->
-                        <Ellipse Width="70" Height="70"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="-10,-10,0,0">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush Center="0.3,0.3" Radius="0.6">
+                        <!-- Modern highlight with subtle effect -->
+                        <Rectangle Name="GlossHighlight" Width="68" Height="68" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="-4,-4,0,0" RadiusX="2" RadiusY="2">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                                     <GradientStop Offset="0" Color="#40FFFFFF"/>
-                                    <GradientStop Offset="0.8" Color="#00FFFFFF"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
-
-                        <!-- Rim highlight for better depth -->
-                        <Ellipse Width="80" Height="80"
-                                Stroke="#30FFFFFF"
-                                StrokeThickness="1"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-
-                        <!-- Central spot highlight -->
-                        <Ellipse Width="25" Height="25"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="-10,-10,0,0">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush>
-                                    <GradientStop Offset="0" Color="#25FFFFFF"/>
+                                    <GradientStop Offset="0.7" Color="#10FFFFFF"/>
                                     <GradientStop Offset="1" Color="#00FFFFFF"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.RenderTransform>
+                                <TranslateTransform X="0" Y="0"/>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <ThicknessTransition Property="Margin" Duration="0:0:0.15" Easing="CircularEaseInOut"/>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="(TranslateTransform.X)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(TranslateTransform.Y)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                            <Rectangle.Effect>
+                                <BlurEffect Radius="1"/>
+                            </Rectangle.Effect>
+                        </Rectangle>
 
-                        <!-- Theme Toggle Button (inner dot) with enhanced appearance -->
-                        <Ellipse Name="ThemeToggle"
-                                Classes="ThemeToggle"
-                                Width="16" Height="16"
-                                Cursor="Hand"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush>
+                        <!-- Modern edge highlight with sharp lines -->
+                        <Rectangle Name="RimHighlight" Width="76" Height="76" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.3" RadiusX="4" RadiusY="4">
+                            <Rectangle.Stroke>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Offset="0" Color="#60FFFFFF"/>
+                                    <GradientStop Offset="1" Color="#30FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Stroke>
+                            <Rectangle.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                                    <DoubleTransition Property="StrokeThickness" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleX)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleY)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                            <Rectangle.Effect>
+                                <BlurEffect Radius="0.5"/>
+                            </Rectangle.Effect>
+                        </Rectangle>
+
+                        <!-- Subtle spot highlight for modern look -->
+                        <Rectangle Name="SpotHighlight" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="-6,-6,0,0" RadiusX="2" RadiusY="2">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Offset="0" Color="#30FFFFFF"/>
+                                    <GradientStop Offset="1" Color="#00FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform X="0" Y="0"/>
+                                </TransformGroup>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <ThicknessTransition Property="Margin" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseInOut"/>
+                                    <DoubleTransition Property="Width" Duration="0:0:0.15" Easing="CubicEaseInOut"/>
+                                    <DoubleTransition Property="Height" Duration="0:0:0.15" Easing="CubicEaseInOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleX)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleY)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(TranslateTransform.X)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(TranslateTransform.Y)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                            <Rectangle.Effect>
+                                <BlurEffect Radius="1"/>
+                            </Rectangle.Effect>
+                        </Rectangle>
+                        
+                        <!-- Modern subtle ambient glow -->
+                        <Rectangle Name="AmbientGlow" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.2" RadiusX="4" RadiusY="4">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Offset="0.3" Color="#40FFFFFF"/>
+                                    <GradientStop Offset="1" Color="#00FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.Effect>
+                                <BlurEffect Radius="4"/>
+                            </Rectangle.Effect>
+                            <Rectangle.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="Width" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="Height" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleX)" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleY)" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                        </Rectangle>
+                        
+                        <!-- Modern outer glow with subtle edge effect -->
+                        <Rectangle Name="OuterGlow" Width="82" Height="82" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.08" RadiusX="4" RadiusY="4">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Offset="0" Color="#50FFFFFF"/>
+                                    <GradientStop Offset="1" Color="#10FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.Effect>
+                                <BlurEffect Radius="6"/>
+                            </Rectangle.Effect>
+                            <Rectangle.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="Width" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="Height" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleX)" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleY)" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                        </Rectangle>
+                        
+                        <!-- Modern inner highlight with minimalistic design -->
+                        <Rectangle Name="InnerCircle" Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.2" RadiusX="2" RadiusY="2">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                                     <GradientStop Offset="0" Color="#40FFFFFF"/>
-                                    <GradientStop Offset="1" Color="#15FFFFFF"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                            <Ellipse.Effect>
-                                <DropShadowEffect BlurRadius="3" Opacity="0.3" OffsetX="0" OffsetY="0"/>
-                            </Ellipse.Effect>
-                        </Ellipse>
+                                    <GradientStop Offset="1" Color="#00FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform X="0" Y="0"/>
+                                </TransformGroup>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Effect>
+                                <BlurEffect Radius="1"/>
+                            </Rectangle.Effect>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <ThicknessTransition Property="Margin" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseInOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleX)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(ScaleTransform.ScaleY)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(TranslateTransform.X)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="(TranslateTransform.Y)" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                        </Rectangle>
+
+                        <!-- Theme Toggle Button with modern flat design -->
+                        <Rectangle Name="ThemeToggle" Classes="ThemeToggle" Width="14" Height="14" Cursor="Hand" HorizontalAlignment="Center" VerticalAlignment="Center" RadiusX="2" RadiusY="2">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Offset="0" Color="#80FFFFFF"/>
+                                    <GradientStop Offset="1" Color="#40FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.Effect>
+                                <DropShadowEffect BlurRadius="2" Opacity="0.3" OffsetX="0" OffsetY="1"/>
+                            </Rectangle.Effect>
+                            <Rectangle.Transitions>
+                                <Transitions>
+                                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CircularEaseOut"/>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseInOut"/>
+                                </Transitions>
+                            </Rectangle.Transitions>
+                        </Rectangle>
                     </Grid>
                 </ControlTemplate>
             </Button.Template>
             <Button.Effect>
-                <DropShadowEffect BlurRadius="10" Opacity="0.2" OffsetX="1" OffsetY="2"/>
+                <DropShadowEffect BlurRadius="8" Opacity="0.25" OffsetX="0" OffsetY="2" Color="#40000000"/>
             </Button.Effect>
+            <Button.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Button.Transitions>
         </Button>
 
         <!-- Right-click context menu with improved styling -->
@@ -128,22 +240,37 @@
                         <Setter Property="FontSize" Value="13"/>
                     </Style>
                 </ContextMenu.Styles>
+
                 <MenuItem Header="Settings" x:Name="SettingsMenuItem">
+                    <MenuItem.Icon>
+                        <PathIcon Data="M9.4,16.6L4.8,12l4.6-4.6L8,6l-6,6l6,6L9.4,16.6z M14.6,16.6l4.6-4.6l-4.6-4.6L16,6l6,6l-6,6L14.6,16.6z"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+
+                <MenuItem Header="Change AI Provider" x:Name="ChangeProviderMenuItem">
                     <MenuItem.Icon>
                         <PathIcon Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
                     </MenuItem.Icon>
+                    <MenuItem Header="Groq" Tag="Groq"/>
+                    <MenuItem Header="GLHF" Tag="GLHF"/>
+                    <MenuItem Header="OpenRouter" Tag="OpenRouter"/>
+                    <MenuItem Header="Cohere" Tag="Cohere"/>
                 </MenuItem>
+
                 <MenuItem Header="Minimize to Tray" x:Name="MinimizeMenuItem">
                     <MenuItem.Icon>
                         <PathIcon Data="M20,14H4V10H20"/>
                     </MenuItem.Icon>
                 </MenuItem>
+
                 <MenuItem Header="Reset Position" x:Name="ResetPositionMenuItem">
                     <MenuItem.Icon>
                         <PathIcon Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
                     </MenuItem.Icon>
                 </MenuItem>
+
                 <Separator Margin="5,3"/>
+
                 <MenuItem Header="Exit" x:Name="ExitMenuItem">
                     <MenuItem.Icon>
                         <PathIcon Data="M19,3H5C3.89,3 3,3.89 3,5V9H5V5H19V19H5V15H3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M10.08,15.58L11.5,17L16.5,12L11.5,7L10.08,8.41L12.67,11H3V13H12.67L10.08,15.58Z"/>
